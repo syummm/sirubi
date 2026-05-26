@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beranda | SiRubi Surabaya</title>
+
+    <link rel="icon" type="image/png" href="logo.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        /* Custom Map Popup & Icon Styles */
+        .popup-header {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-bottom: 2px solid #bae6fd;
+            padding: 12px 16px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            color: #0369a1;
+        }
+
+        .popup-header i {
+            font-size: 20px;
+            color: #3b82f6;
+        }
+
+        .popup-header.route-header i {
+            color: #ff8c42;
+        }
+
+        .popup-header.tod-header i {
+            color: #ef4444;
+        }
+
+        .popup-body {
+            padding: 12px 16px 16px 16px;
+            background: #ffffff;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #334155;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .custom-pin-halte-baru {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 10px rgba(3, 105, 161, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .custom-pin-halte-baru i {
+            transform: rotate(45deg);
+            color: white;
+            font-size: 18px;
+            filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
+        }
+
+        .halte-baru-label {
+            margin-top: 4px;
+            background: linear-gradient(135deg, #0369a1, #0ea5e9);
+            color: #ffffff;
+            font-family: 'Kanit', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            white-space: nowrap;
+            border: 1.5px solid #7dd3fc;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+        }
+
+        .animate-halte-pop {
+            opacity: 0;
+            animation: halte-pop-in 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes halte-pop-in {
+            0% {
+                transform: scale(0) translateY(20px);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.1) translateY(-5px);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .desa-label-tooltip {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-weight: 700;
+            font-size: 10px;
+            color: #1e293b;
+            text-transform: uppercase;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.9), -1px -1px 2px rgba(255, 255, 255, 0.9), 1px -1px 2px rgba(255, 255, 255, 0.9), -1px 1px 2px rgba(255, 255, 255, 0.9);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Animasi mengambang (fluid bounce) */
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-50px);
+            }
+
+            /* Jarak pantulan ke atas */
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        .animate-float {
+            animation: float 2s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+            to {
+                background-position: -200% center;
+            }
+        }
+
+        .animate-shine {
+            background: linear-gradient(120deg, #FCD116 30%, #ffffff 50%, #FCD116 70%);
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: shine 3s linear infinite;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col min-h-screen bg-[#00529C]">
+
+    <header
+        class="sticky top-0 bg-[#FCD116] h-16 flex items-center justify-between px-4 md:px-6 shrink-0 z-50 shadow-md">
+        <div class="flex items-center gap-2 md:gap-4">
+            <button onclick="toggleMobileMenu()"
+                class="text-[#E3242B] p-1 rounded hover:bg-yellow-400 transition-colors focus:outline-none"
+                title="Buka Menu">
+                <i class="ph-bold ph-list text-2xl"></i>
+            </button>
+
+            <img src="f8b7cf15-aecb-4655-ade8-e1426c99e62e.png" alt="Logo SiRubi"
+                class="h-8 md:h-10 object-contain bg-transparent"
+                onerror="this.src='https://via.placeholder.com/150x40/E3242B/FCD116?text=LOGO+ANDA'">
+            <div class="hidden lg:block h-8 md:h-10 border-l-2 border-[#E3242B]"></div>
+            <span class="text-[#E3242B] text-lg font-medium hidden lg:inline whitespace-nowrap">Sistem Informasi Rute
+                dan Halte Bus
+                Sekolah Surabaya</span>
+        </div>
+
+        <nav class="flex gap-2 sm:gap-3 md:gap-6 items-center">
+            <a href="index.html"
+                class="text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 underline">Home</a>
+            <a href="peta.html"
+                class="text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 hover:underline">WebGIS</a>
+            <a href="daftar.html"
+                class="hidden md:inline text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 hover:underline">Daftar</a>
+        </nav>
+    </header>
+
+    <div id="mobile-backdrop" onclick="toggleMobileMenu()"
+        class="fixed inset-0 bg-black/60 z-[40] hidden transition-opacity"></div>
+
+    <aside id="mobile-menu"
+        class="fixed inset-y-0 left-0 w-64 bg-[#00529C] p-6 flex flex-col gap-6 z-[50] transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl">
+        <div class="flex justify-between items-center border-b border-blue-800 pb-4">
+            <span class="text-[#FCD116] font-bold text-xl">Menu Navigasi</span>
+            <button onclick="toggleMobileMenu()" class="text-[#FCD116] hover:text-white">
+                <i class="ph-bold ph-x text-2xl"></i>
+            </button>
+        </div>
+        <div class="flex flex-col gap-4">
+            <a href="index.html" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-house"></i> Home</a>
+            <a href="peta.html" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-map-trifold"></i> WebGIS Peta</a>
+            <a href="daftar.html" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-clipboard-text"></i> Daftar</a>
+            
+            <a href="#fasilitas-section" onclick="toggleMobileMenu()" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-bus"></i> Layanan</a>
+            <a href="#platform-section" onclick="toggleMobileMenu()" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-squares-four"></i> Fitur Platform</a>
+            <a href="#features-section" onclick="toggleMobileMenu()" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-chart-line-up"></i> Hasil Penelitian</a>
+            <a href="#sdgs-section" onclick="toggleMobileMenu()" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-leaf"></i> Dampak</a>
+            <a href="#additional-info" onclick="toggleMobileMenu()" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-info"></i> Tentang</a>
+        </div>
+    </aside>
+
+    <main
+        class="relative flex-1 flex flex-col-reverse lg:flex-row justify-between lg:items-center px-0 lg:pl-20 overflow-hidden bg-[#00529C] lg:min-h-[calc(100vh-4rem)]">
+
+        <img src="logoresmi.png" alt="Logo Resmi"
+            class="absolute top-4 left-6 lg:top-6 lg:left-20 z-40 h-10 md:h-14 lg:h-16 object-contain bg-white/80 backdrop-blur-sm border border-white/50 px-1 py-0 md:px-1.5 rounded-lg md:rounded-xl shadow-md"
+            onerror="this.src='https://via.placeholder.com/200x80/002d6b/FCD116?text=LOGO+RESMI'">
+
+        <div
+            class="relative z-20 w-full lg:w-5/12 flex flex-col items-center lg:items-start text-center lg:text-left gap-2 px-6 lg:px-0 lg:pr-10 mt-10 lg:mt-28 pb-8 lg:py-0">
+            <img src="f8b7cf15-aecb-4655-ade8-e1426c99e62e.png" alt="Logo SiRubi"
+                class="h-40 md:h-44 lg:h-52 object-contain bg-transparent animate-float"
+                onerror="this.src='https://via.placeholder.com/150x40/E3242B/FCD116?text=LOGO+ANDA'">
+            <h2 class="text-left leading-tight mt-2 lg:mt-4 text-center lg:text-left">
+                <span class="block text-white text-3xl md:text-4xl lg:text-[2.5rem] font-black tracking-tight mb-1">Sistem Informasi Rute &amp; Halte</span>
+                <span class="block text-[#FCD116] text-3xl md:text-4xl lg:text-[2.5rem] font-black tracking-tight">Bus Sekolah Surabaya</span>
+            </h2>
+            <p class="text-white/90 text-sm md:text-base lg:text-lg leading-relaxed mt-2 font-light">
+                SiRuBi adalah platform pemetaan digital interaktif yang dirancang untuk mengoptimalkan layanan
+                transportasi pelajar. Platform ini mempermudah kamu untuk melihat halte dan rute Bus Sekolah Surabaya.
+                Yuk, jadikan perjalanan sekolahmu lebih mudah dan terencana.
+            </p>
+            <div
+                class="flex flex-row items-center justify-center lg:justify-start gap-3 mt-6 lg:mt-6 w-full lg:w-auto">
+                <a href="#fasilitas-section"
+                    class="w-1/2 sm:w-auto bg-[#E36A2B] text-[#FCD116] font-bold text-sm sm:text-base md:text-lg py-2.5 px-3 sm:px-6 rounded-md shadow-lg border-b-4 border-r-2 border-[#b84e1b] hover:bg-[#d95d20] hover:translate-y-1 hover:border-b-2 hover:border-r-1 transition-all active:translate-y-2 active:border-0 inline-block text-center flex items-center justify-center">
+                    Pelajari Lebih Lanjut
+                </a>
+                <a href="peta.html"
+                    class="w-1/2 sm:w-auto bg-[#FCD116] text-[#E36A2B] font-bold text-sm sm:text-base md:text-lg py-2.5 px-3 sm:px-6 rounded-md shadow-lg border-b-4 border-r-2 border-[#dcae0b] hover:bg-[#e5c015] hover:translate-y-1 hover:border-b-2 hover:border-r-1 transition-all active:translate-y-2 active:border-0 inline-block text-center flex items-center justify-center">
+                    Buka WebGIS
+                </a>
+            </div>
+        </div>
+
+        <div
+            class="relative z-10 w-full lg:w-7/12 mt-0 h-[50vh] md:h-[60vh] lg:h-[calc(100vh-4rem)] flex justify-center lg:justify-start items-end self-end overflow-hidden lg:overflow-visible">
+
+            <div
+                class="hidden lg:block absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#00529C] via-[#00529C]/90 to-transparent z-20 pointer-events-none">
+            </div>
+            <!-- Gradient bawah diaktifkan kembali untuk mobile dengan tinggi yang disesuaikan dan gradasi diperhalus -->
+            <div
+                class="absolute bottom-0 inset-x-0 h-32 lg:h-40 bg-gradient-to-t from-[#00529C] via-[#00529C]/60 to-transparent z-20 pointer-events-none">
+            </div>
+
+            <div
+                class="relative h-full w-max shrink-0 scale-[1.3] md:scale-110 lg:scale-105 origin-bottom lg:origin-bottom-left transition-transform duration-500">
+                <img src="jalan.png" alt="Background Jalan Isometrik" class="h-full w-auto max-w-none relative z-0">
+
+                <img id="bus-moving" src="bus-png.png" alt="Bus Sekolah"
+                    class="absolute z-10 w-[60%] top-[25%] right-[18%] drop-shadow-xl transition-all duration-75 ease-out"
+                    style="transform-origin: center;">
+            </div>
+        </div>
+
+    </main>
+
+    <!-- SECTION: FASILITAS -->
+    <section id="fasilitas-section" class="bg-[#00529C] py-24 px-4 md:px-8 lg:px-12 relative overflow-hidden">
+        <div
+            style="position:absolute;top:-80px;right:-80px;width:400px;height:400px;background:radial-gradient(circle,rgba(252,209,22,0.08) 0%,transparent 70%);pointer-events:none;">
+        </div>
+        <div
+            style="position:absolute;bottom:-60px;left:-60px;width:300px;height:300px;background:radial-gradient(circle,rgba(227,106,43,0.08) 0%,transparent 70%);pointer-events:none;">
+        </div>
+        <div class="max-w-[80%] 2xl:max-w-[1600px] mx-auto">
+            <div class="text-center mb-16 reveal-on-scroll">
+                <span
+                    style="background:rgba(252,209,22,0.15);border:1px solid rgba(252,209,22,0.4);color:#FCD116;font-size:0.85rem;font-weight:700;letter-spacing:0.12em;padding:6px 20px;border-radius:50px;display:inline-block;margin-bottom:16px;text-transform:uppercase;">&#10022;
+                    Layanan Unggulan</span>
+                <h2 class="text-4xl md:text-5xl font-bold text-white leading-tight">Fasilitas Nyaman,<br><span
+                        class="animate-shine">Berangkat Sekolah Makin Aman!</span></h2>
+                <p class="mt-4 text-white/70 text-base md:text-lg leading-relaxed max-w-2xl mx-auto">Armada bus yang
+                    dilengkapi berbagai fasilitas terbaik khusus untuk pelajar Surabaya.</p>
+            </div>
+            <div class="grid gap-6 lg:grid-cols-2 mb-6 reveal-on-scroll">
+                <article class="group relative rounded-3xl overflow-hidden shadow-2xl"
+                    style="border:1px solid rgba(255,255,255,0.15);">
+                    <img src="interior.jpeg" alt="Kursi Ergonomis & Luas"
+                        class="w-full aspect-video lg:h-full lg:min-h-[400px] xl:min-h-[480px] object-cover transition-transform duration-700 group-hover:scale-105"
+                        onerror="this.src='https://via.placeholder.com/900x560/003d7a/FCD116?text=Interior+Bus'">
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#001a3d] via-[#001a3d]/40 to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 right-0 p-8">
+                        <div
+                            style="display:inline-flex;align-items:center;gap:8px;background:rgba(252,209,22,0.2);border:1px solid rgba(252,209,22,0.4);border-radius:50px;padding:4px 12px;margin-bottom:10px;">
+                            <i class="ph-fill ph-armchair" style="color:#FCD116;font-size:16px;"></i>
+                            <span
+                                style="color:#FCD116;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;">KENYAMANAN</span>
+                        </div>
+                        <h3 class="text-2xl md:text-3xl font-bold text-white">Kursi Ergonomis &amp; Luas</h3>
+                        <p class="mt-2 text-white/75 text-sm md:text-base leading-relaxed">Rasakan kenyamanan kursi bus
+                            yang dirancang khusus agar perjalanan tetap rileks dan aman setiap hari.</p>
+                    </div>
+                </article>
+                <article class="group relative rounded-3xl overflow-hidden shadow-2xl"
+                    style="border:1px solid rgba(255,255,255,0.15);">
+                    <img src="images/Sopir.jpeg" alt="Sopir Profesional"
+                        class="w-full aspect-video lg:h-full lg:min-h-[400px] xl:min-h-[480px] object-cover transition-transform duration-700 group-hover:scale-105"
+                        onerror="this.src='https://via.placeholder.com/900x560/003d7a/FCD116?text=Sopir+Profesional'">
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#001a3d] via-[#001a3d]/40 to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 right-0 p-8">
+                        <div
+                            style="display:inline-flex;align-items:center;gap:8px;background:rgba(227,106,43,0.4);border:1px solid rgba(227,106,43,0.4);border-radius:50px;padding:4px 12px;margin-bottom:10px;">
+                            <i class="ph-fill ph-steering-wheel" style="color:#fb923c;font-size:16px;"></i>
+                            <span
+                                style="color:#fb923c;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;">KEAMANAN</span>
+                        </div>
+                        <h3 class="text-2xl md:text-3xl font-bold text-white">Sopir Profesional</h3>
+                        <p class="mt-2 text-white/75 text-sm md:text-base leading-relaxed line-clamp-3">Perjalanan
+                            sekolah lebih aman dan tenang bersama sopir terlatih yang selalu mengutamakan keselamatan
+                            penumpang serta ketepatan waktu rute.</p>
+                    </div>
+                </article>
+            </div>
+            <div class="grid gap-6 md:grid-cols-3 reveal-on-scroll">
+                <article class="group relative rounded-3xl overflow-hidden shadow-2xl"
+                    style="border:1px solid rgba(255,255,255,0.15);">
+                    <img src="images/Buku.jpeg" alt="Buku Bacaan"
+                        class="w-full aspect-video md:aspect-[4/3] lg:aspect-video object-cover transition-transform duration-700 group-hover:scale-105"
+                        onerror="this.src='https://via.placeholder.com/600x420/003d7a/FCD116?text=Buku+Bacaan'">
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#001a3d]/90 to-transparent"></div>
+                    <div class="absolute bottom-0 p-5">
+                        <i class="ph-fill ph-book-open"
+                            style="color:#4ade80;font-size:28px;display:block;margin-bottom:6px;"></i>
+                        <h3 class="text-lg font-bold text-white">Terdapat Buku Bacaan</h3>
+                        <p class="text-white/70 text-sm mt-1">Tersedia beragam buku bacaan menarik untuk menemani waktu
+                            perjalananmu.</p>
+                    </div>
+                </article>
+                <article class="group relative rounded-3xl overflow-hidden shadow-2xl"
+                    style="border:1px solid rgba(255,255,255,0.15);">
+                    <img src="bus sekolah.jpeg" alt="Armada Modern"
+                        class="w-full aspect-video md:aspect-[4/3] lg:aspect-video object-cover transition-transform duration-700 group-hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#001a3d]/90 to-transparent"></div>
+                    <div class="absolute bottom-0 p-5">
+                        <i class="ph-fill ph-bus"
+                            style="color:#38bdf8;font-size:28px;display:block;margin-bottom:6px;"></i>
+                        <h3 class="text-lg font-bold text-white">Armada Modern &amp; Terawat</h3>
+                        <p class="text-white/70 text-sm mt-1">Tampilan bus bersih, modern, dan selalu dirawat rutin
+                            untuk standar kualitas pelajar.</p>
+                    </div>
+                </article>
+                <article class="group relative rounded-3xl overflow-hidden shadow-2xl"
+                    style="border:1px solid rgba(255,255,255,0.15);">
+                    <img src="images/p3k.jpg" alt="Fasilitas P3K"
+                        class="w-full aspect-video md:aspect-[4/3] lg:aspect-video object-cover transition-transform duration-700 group-hover:scale-105"
+                        onerror="this.src='https://via.placeholder.com/600x420/003d7a/FCD116?text=P3K'">
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#001a3d]/90 to-transparent"></div>
+                    <div class="absolute bottom-0 p-5">
+                        <i class="ph-fill ph-first-aid"
+                            style="color:#ef4444;font-size:28px;display:block;margin-bottom:6px;"></i>
+                        <h3 class="text-lg font-bold text-white">Tersedia Kotak P3K</h3>
+                        <p class="text-white/70 text-sm mt-1">Bus dilengkapi dengan fasilitas kotak P3K untuk kebutuhan
+                            penanganan pertolongan pertama.</p>
+                    </div>
+                </article>
+            </div>
+            <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 reveal-on-scroll">
+                <div class="text-center p-6 rounded-2xl"
+                    style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);">
+                    <p class="text-4xl font-black text-[#FCD116]">6</p>
+                    <p class="text-white/70 text-sm mt-1 font-medium">Rute Aktif</p>
+                </div>
+                <div class="text-center p-6 rounded-2xl"
+                    style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);">
+                    <p class="text-4xl font-black text-[#FCD116]">11</p>
+                    <p class="text-white/70 text-sm mt-1 font-medium">Jumlah Armada</p>
+                </div>
+                <div class="text-center p-6 rounded-2xl"
+                    style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);">
+                    <p class="text-4xl font-black text-[#FCD116]">50+</p>
+                    <p class="text-white/70 text-sm mt-1 font-medium">Sekolah Terlayani</p>
+                </div>
+                <div class="text-center p-6 rounded-2xl"
+                    style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);">
+                    <p class="text-4xl font-black text-[#FCD116]">100%</p>
+                    <p class="text-white/70 text-sm mt-1 font-medium">Gratis untuk Pelajar</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div style="background:#00529C;line-height:0;overflow:hidden;">
+        <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"
+            style="display:block; width:100%; height:60px;">
+            <path fill="#002d6b" d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z">
+                <animate attributeName="d" dur="5s" repeatCount="indefinite"
+                    values="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z; M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z; M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" />
+            </path>
+            <path fill="#002d6b" d="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z">
+                <animate attributeName="d" dur="7s" repeatCount="indefinite"
+                    values="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z; M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z; M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z" />
+            </path>
+        </svg>
+    </div>
+
+    <section id="platform-section" class="py-24 px-4 md:px-8 lg:px-12" style="background:#002d6b;">
+        <div class="max-w-[80%] 2xl:max-w-[1600px] mx-auto">
+            <div class="text-center mb-16 reveal-on-scroll">
+                <span
+                    style="background:rgba(227,106,43,0.2);border:1px solid rgba(227,106,43,0.5);color:#E36A2B;font-size:0.85rem;font-weight:700;letter-spacing:0.12em;padding:6px 20px;border-radius:50px;display:inline-block;margin-bottom:16px;text-transform:uppercase;">&#10022;
+                    Fitur Platform</span>
+                <h2 class="text-4xl md:text-5xl font-bold text-white">Satu Platform untuk<br><span
+                        style="color:#FCD116;">Semua Kebutuhan</span> Perjalananmu</h2>
+            </div>
+            <div class="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 reveal-on-scroll">
+                <article class="group relative rounded-3xl overflow-hidden cursor-pointer"
+                    style="background:linear-gradient(145deg,#E36A2B,#c95a22);border:1px solid rgba(255,255,255,0.15);transition:transform 0.3s,box-shadow 0.3s;"
+                    onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 24px 48px rgba(0,0,0,0.3)'"
+                    onmouseout="this.style.transform='';this.style.boxShadow=''"
+                    onclick="window.location.href='peta.html'">
+                    <div class="p-4 sm:p-6" style="background:rgba(0,0,0,0.15);"><img src="peta.png"
+                            alt="Peta Interaktif"
+                            class="w-full aspect-video lg:aspect-[4/3] xl:aspect-video object-contain transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-center justify-between w-full gap-2 mb-3">
+                            <div
+                                class="h-[3px] bg-[#FCD116] rounded-sm transition-all duration-500 w-9 group-hover:w-[calc(100%-70px)]">
+                            </div><span
+                                class="text-[#FCD116] text-[11px] font-bold uppercase tracking-wider opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0 border border-[#FCD116]/80 px-3 py-1 rounded-full whitespace-nowrap group-active:scale-90 group-active:bg-[#FCD116] group-active:text-[#002d6b]">BUKA</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Peta Interaktif (WebGIS)</h3>
+                        <p class="mt-2 text-white/80 text-sm leading-relaxed">Cari rute bus sekolah dan halte terdekat
+                            dengan peta digital interaktif yang mudah digunakan.</p>
+                    </div>
+                </article>
+                <article class="group relative rounded-3xl overflow-hidden cursor-pointer"
+                    style="background:linear-gradient(145deg,#E36A2B,#c95a22);border:1px solid rgba(255,255,255,0.15);transition:transform 0.3s,box-shadow 0.3s;"
+                    onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 24px 48px rgba(0,0,0,0.3)'"
+                    onmouseout="this.style.transform='';this.style.boxShadow=''"
+                    onclick="window.location.href='peta.html'">
+                    <div class="p-4 sm:p-6" style="background:rgba(0,0,0,0.15);"><img src="tanggal.png" alt="Jadwal"
+                            class="w-full aspect-video lg:aspect-[4/3] xl:aspect-video object-contain transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-center justify-between w-full gap-2 mb-3">
+                            <div
+                                class="h-[3px] bg-[#FCD116] rounded-sm transition-all duration-500 w-9 group-hover:w-[calc(100%-70px)]">
+                            </div><span
+                                class="text-[#FCD116] text-[11px] font-bold uppercase tracking-wider opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0 border border-[#FCD116]/80 px-3 py-1 rounded-full whitespace-nowrap group-active:scale-90 group-active:bg-[#FCD116] group-active:text-[#002d6b]">BUKA</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Jadwal dan Rute Terpadu</h3>
+                        <p class="mt-2 text-white/80 text-sm leading-relaxed">Akses jadwal operasional dan lintasan rute
+                            bus sekolah yang lengkap dan akurat.</p>
+                    </div>
+                </article>
+                <article class="group relative rounded-3xl overflow-hidden cursor-pointer"
+                    style="background:linear-gradient(145deg,#E36A2B,#c95a22);border:1px solid rgba(255,255,255,0.15);transition:transform 0.3s,box-shadow 0.3s;"
+                    onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 24px 48px rgba(0,0,0,0.3)'"
+                    onmouseout="this.style.transform='';this.style.boxShadow=''"
+                    onclick="window.location.href='daftar.html'">
+                    <div class="p-4 sm:p-6" style="background:rgba(0,0,0,0.15);"><img src="daftar.png" alt="Daftar"
+                            class="w-full aspect-video lg:aspect-[4/3] xl:aspect-video object-contain transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-center justify-between w-full gap-2 mb-3">
+                            <div
+                                class="h-[3px] bg-[#FCD116] rounded-sm transition-all duration-500 w-9 group-hover:w-[calc(100%-70px)]">
+                            </div><span
+                                class="text-[#FCD116] text-[11px] font-bold uppercase tracking-wider opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0 border border-[#FCD116]/80 px-3 py-1 rounded-full whitespace-nowrap group-active:scale-90 group-active:bg-[#FCD116] group-active:text-[#002d6b]">BUKA</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Daftar Layanan Bus</h3>
+                        <p class="mt-2 text-white/80 text-sm leading-relaxed">Daftarkan diri secara online untuk
+                            mendapatkan akses layanan bus sekolah gratis dengan mudah.</p>
+                    </div>
+                </article>
+                <article class="group relative rounded-3xl overflow-hidden cursor-pointer"
+                    style="background:linear-gradient(145deg,#E36A2B,#c95a22);border:1px solid rgba(255,255,255,0.15);transition:transform 0.3s,box-shadow 0.3s;"
+                    onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 24px 48px rgba(0,0,0,0.3)'"
+                    onmouseout="this.style.transform='';this.style.boxShadow=''"
+                    onclick="window.location.href='peta.html?action=findMyLocation'">
+                    <div class="p-4 sm:p-6" style="background:rgba(0,0,0,0.15);"><img src="jarak_halte.png"
+                            alt="Cari Jarak"
+                            class="w-full aspect-video lg:aspect-[4/3] xl:aspect-video object-contain transition-transform duration-500 group-hover:scale-110">
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-center justify-between w-full gap-2 mb-3">
+                            <div
+                                class="h-[3px] bg-[#FCD116] rounded-sm transition-all duration-500 w-9 group-hover:w-[calc(100%-70px)]">
+                            </div><span
+                                class="text-[#FCD116] text-[11px] font-bold uppercase tracking-wider opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0 border border-[#FCD116]/80 px-3 py-1 rounded-full whitespace-nowrap group-active:scale-90 group-active:bg-[#FCD116] group-active:text-[#002d6b]">BUKA</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Temukan Jarak Halte dari Lokasi Anda</h3>
+                        <p class="mt-2 text-white/80 text-sm leading-relaxed">Cari tahu rute dan jarak menuju halte
+                            keberangkatan dari lokasi Anda saat ini.</p>
+                    </div>
+                </article>
+                <article class="group relative rounded-3xl overflow-hidden cursor-pointer"
+                    style="background:linear-gradient(145deg,#0369a1,#0284c7);border:1px solid rgba(255,255,255,0.15);transition:transform 0.3s,box-shadow 0.3s;"
+                    onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 24px 48px rgba(0,0,0,0.3)'"
+                    onmouseout="this.style.transform='';this.style.boxShadow=''"
+                    onclick="document.getElementById('features-section').scrollIntoView({behavior: 'smooth'})">
+                    <div class="p-4 sm:p-6" style="background:rgba(0,0,0,0.15);"><img src="rekomendasi_halte.png"
+                            alt="Rekomendasi Halte"
+                            class="w-full aspect-video lg:aspect-[4/3] xl:aspect-video object-contain transition-transform duration-500 group-hover:scale-110"
+                            onerror="this.src='peta.png'"></div>
+                    <div class="p-5">
+                        <div class="flex items-center justify-between w-full gap-2 mb-3">
+                            <div
+                                class="h-[3px] bg-[#FCD116] rounded-sm transition-all duration-500 w-9 group-hover:w-[calc(100%-70px)]">
+                            </div><span
+                                class="text-[#FCD116] text-[11px] font-bold uppercase tracking-wider opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0 border border-[#FCD116]/80 px-3 py-1 rounded-full whitespace-nowrap group-active:scale-90 group-active:bg-[#FCD116] group-active:text-[#002d6b]">BUKA</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Rekomendasi Halte Rute Timur</h3>
+                        <p class="mt-2 text-white/80 text-sm leading-relaxed">Titik rekomendasi penempatan halte baru
+                            untuk rute timur dengan metode AHP.</p>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <div style="background:#002d6b;line-height:0;overflow:hidden;">
+        <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"
+            style="display:block; width:100%; height:60px;">
+            <path fill="#00529C" d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z">
+                <animate attributeName="d" dur="5s" repeatCount="indefinite"
+                    values="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z; M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z; M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" />
+            </path>
+            <path fill="#00529C" d="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z">
+                <animate attributeName="d" dur="7s" repeatCount="indefinite"
+                    values="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z; M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z; M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z" />
+            </path>
+        </svg>
+    </div>
+
+    <section id="features-section" class="bg-[#00529C] py-24 px-4 md:px-8 lg:px-12 relative overflow-hidden">
+        <div
+            style="position:absolute;top:0;right:0;width:500px;height:500px;background:radial-gradient(circle,rgba(252,209,22,0.06) 0%,transparent 70%);pointer-events:none;">
+        </div>
+        <div class="max-w-[80%] 2xl:max-w-[1600px] mx-auto">
+            <div class="mb-14 reveal-on-scroll">
+                <span
+                    style="background:rgba(252,209,22,0.15);border:1px solid rgba(252,209,22,0.4);color:#FCD116;font-size:0.85rem;font-weight:700;letter-spacing:0.12em;padding:6px 20px;border-radius:50px;display:inline-block;margin-bottom:16px;text-transform:uppercase;">&#10022;
+                    Hasil Penelitian</span>
+                <h3 class="animate-shine font-black text-2xl md:text-3xl mb-3 tracking-wide">Rekomendasi Halte Berbasis
+                    Data!</h3>
+                <h2 class="text-4xl md:text-5xl font-bold text-white">Parameter Penentuan Halte</h2>
+                <p class="mt-4 text-white/70 text-base leading-relaxed max-w-2xl">Tiga parameter utama dianalisis
+                    menggunakan metode <strong class="text-[#FCD116]">Analytical Hierarchy Process (AHP)</strong> untuk
+                    menentukan lokasi halte bus sekolah yang optimal.</p>
+            </div>
+
+            <div id="feature-list" class="space-y-4 reveal-on-scroll">
+                <div class="rounded-2xl overflow-hidden shadow-xl">
+                    <button type="button" onclick="toggleDropdown('item-1')"
+                        class="w-full flex items-center justify-between px-6 py-5 text-left group transition-all duration-300"
+                        style="background:linear-gradient(135deg,#0a3b75,#082f5d);">
+                        <div class="flex items-center gap-5">
+                            <div
+                                style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#FCD116,#e0a800);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(252,209,22,0.3);">
+                                <span style="font-size:1.3rem;font-weight:900;color:#003d7a;">01</span>
+                            </div>
+                            <div>
+                                <p
+                                    style="color:rgba(252,209,22,0.7);font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px;">
+                                    Parameter Pertama</p>
+                                <h3 class="text-2xl md:text-3xl font-bold text-white tracking-wide">Density</h3>
+                            </div>
+                        </div>
+                        <div
+                            style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i id="icon-item-1"
+                                class="ph ph-caret-right text-2xl text-white transition-transform duration-300"></i>
+                        </div>
+                    </button>
+                    <div id="item-1"
+                        class="max-h-0 overflow-hidden transition-[max-height] duration-500 ease-in-out bg-white">
+                        
+
+
+                        <div class="flex flex-col md:flex-row w-full min-h-[400px]">
+                            <div class="w-full md:w-1/2 bg-[#FCD116] relative flex overflow-hidden">
+                                <div id="item-1-left-text"
+                                    class="w-full p-8 md:p-12 flex flex-col justify-center transition-all duration-500 ease-in-out opacity-100 scale-100 pointer-events-auto">
+                                    <h4 class="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
+                                        Kepadatan<br>Penduduk</h4>
+                                    <p class="text-white text-base md:text-lg font-medium mb-8 leading-relaxed">
+                                        Digunakan untuk mengidentifikasi kepadatan penduduk yang berada di sekitar titik
+                                        halte Bus Sekolah Surabaya. Semakin padat penduduk di sekitarnya maka semakin
+                                        tinggi potensi kawasan tersebut.</p>
+                                    <button id="item-1-left-btn" onclick="toggleMap('item-1', 'left')"
+                                        class="bg-[#E36A2B] hover:bg-[#c95a22] text-white font-bold text-xl py-3 px-8 w-max rounded-lg transition-all shadow-lg hover:-translate-y-1"><i
+                                            class="ph-bold ph-map-trifold mr-2"></i>Lihat Peta</button>
+                                </div>
+                                <div id="item-1-left-map"
+                                    class="absolute inset-0 bg-white p-0 border-r-2 border-white/20 transition-all duration-500 ease-in-out opacity-0 scale-95 pointer-events-none z-10">
+                                    <div id="map-ndbi" class="w-full h-full z-0"></div>
+                                </div>
+                            </div>
+                            <div class="w-full md:w-1/2 bg-[#E36A2B] relative flex overflow-hidden">
+                                <div id="item-1-right-text"
+                                    class="w-full p-8 md:p-12 flex flex-col justify-center transition-all duration-500 ease-in-out opacity-100 scale-100 pointer-events-auto">
+                                    <h4 class="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
+                                        Kepadatan<br>Bangunan</h4>
+                                    <p class="text-white text-base md:text-lg font-medium mb-8 leading-relaxed">
+                                        Digunakan untuk mengidentifikasi kepadatan bangunan yang berada di sekitar titik
+                                        halte Bus Sekolah Surabaya. Semakin padat bangunan maka semakin tinggi potensi
+                                        kawasan tersebut.</p>
+                                    <button id="item-1-right-btn" onclick="toggleMap('item-1', 'right')"
+                                        class="bg-[#FCD116] hover:bg-[#e0a800] text-[#003d7a] font-bold text-xl py-3 px-8 w-max rounded-lg transition-all shadow-lg hover:-translate-y-1"><i
+                                            class="ph-bold ph-map-trifold mr-2"></i>Lihat Peta</button>
+                                </div>
+                                <div id="item-1-right-map"
+                                    class="absolute inset-0 bg-white p-0 border-l-2 border-white/20 transition-all duration-500 ease-in-out opacity-0 scale-95 pointer-events-none z-10">
+                                    <div id="map-penduduk" class="w-full h-full z-0"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Chart Bobot AHP -->
+                        <div class="w-full px-8 md:px-12 pt-2 pb-4 bg-white relative border-t border-gray-100">
+                            <h4 class="text-[#082f5d] font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <i class="ph-bold ph-chart-bar text-base"></i> Nilai Bobot Parameter
+                            </h4>
+                            <div class="w-full h-8 flex rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                                <div class="h-full bg-gradient-to-r from-[#FCD116] to-[#ffdb4d] flex items-center justify-start px-4 text-[#082f5d] font-black text-xs" style="width: 86.1%;">
+                                    <span>86.1%</span>
+                                </div>
+                                <div class="h-full bg-gradient-to-r from-[#c95a22] to-[#E36A2B] flex items-center justify-end px-3 text-white font-black text-xs" style="width: 13.9%;">
+                                    <span>13.9%</span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mt-2 px-1">
+                                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Kepadatan Penduduk</span>
+                                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Kepadatan Bangunan</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl overflow-hidden shadow-xl">
+                    <button type="button" onclick="toggleDropdown('item-2')"
+                        class="w-full flex items-center justify-between px-6 py-5 text-left group transition-all duration-300"
+                        style="background:linear-gradient(135deg,#0a3b75,#082f5d);">
+                        <div class="flex items-center gap-5">
+                            <div
+                                style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#E36A2B,#c95a22);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(227,106,43,0.3);">
+                                <span style="font-size:1.3rem;font-weight:900;color:white;">02</span>
+                            </div>
+                            <div>
+                                <p
+                                    style="color:rgba(227,106,43,0.8);font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px;">
+                                    Parameter Kedua</p>
+                                <h3 class="text-2xl md:text-3xl font-bold text-white tracking-wide">Diversity</h3>
+                            </div>
+                        </div>
+                        <div
+                            style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i id="icon-item-2"
+                                class="ph ph-caret-right text-2xl text-white transition-transform duration-300"></i>
+                        </div>
+                    </button>
+                    <div id="item-2"
+                        class="max-h-0 overflow-hidden transition-[max-height] duration-500 ease-in-out bg-white">
+                        <div class="flex flex-col md:flex-row w-full min-h-[400px]">
+                            <div class="w-full md:w-1/2 bg-[#FCD116] relative flex overflow-hidden">
+                                <div id="item-2-left-text"
+                                    class="w-full p-8 md:p-12 flex flex-col justify-center transition-all duration-500 ease-in-out opacity-100 scale-100 pointer-events-auto">
+                                    <h4 class="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">Sebaran
+                                        Tujuan<br>Penumpang</h4>
+                                    <p class="text-white text-base md:text-lg font-medium mb-8 leading-relaxed">
+                                        Digunakan untuk mengidentifikasi sebaran sekolah penumpang Bus Sekolah Surabaya.
+                                        Semakin banyak sebaran tujuan penumpang maka semakin tinggi potensi kawasan
+                                        tersebut.</p>
+                                    <button id="item-2-left-btn" onclick="toggleMap('item-2', 'left')"
+                                        class="bg-[#E36A2B] hover:bg-[#c95a22] text-white font-bold text-xl py-3 px-8 w-max rounded-lg transition-all shadow-lg hover:-translate-y-1"><i
+                                            class="ph-bold ph-map-trifold mr-2"></i>Lihat Peta</button>
+                                </div>
+                                <div id="item-2-left-map"
+                                    class="absolute inset-0 bg-white p-0 border-r-2 border-white/20 transition-all duration-500 ease-in-out opacity-0 scale-95 pointer-events-none z-10">
+                                    <div id="map-entropy" class="w-full h-full z-0"></div>
+                                </div>
+                            </div>
+                            <div class="w-full md:w-1/2 bg-[#E36A2B] relative flex overflow-hidden">
+                                <div id="item-2-right-text"
+                                    class="w-full p-8 md:p-12 flex flex-col justify-center transition-all duration-500 ease-in-out opacity-100 scale-100 pointer-events-auto">
+                                    <h4 class="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">Peta
+                                        Penggunaan<br>Lahan</h4>
+                                    <p class="text-white text-base md:text-lg font-medium mb-8 leading-relaxed">
+                                        Digunakan untuk mengidentifikasi keberagaman dalam penggunaan lahan yang berada
+                                        di sekitar titik halte Bus Sekolah Surabaya.</p>
+                                    <button id="item-2-right-btn" onclick="toggleMap('item-2', 'right')"
+                                        class="bg-[#FCD116] hover:bg-[#e0a800] text-[#003d7a] font-bold text-xl py-3 px-8 w-max rounded-lg transition-all shadow-lg hover:-translate-y-1"><i
+                                            class="ph-bold ph-map-trifold mr-2"></i>Lihat Peta</button>
+                                </div>
+                                <div id="item-2-right-map"
+                                    class="absolute inset-0 bg-white p-0 border-l-2 border-white/20 transition-all duration-500 ease-in-out opacity-0 scale-95 pointer-events-none z-10">
+                                    <div id="map-tujuan" class="w-full h-full z-0"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chart Bobot AHP Item 2 -->
+                        <div class="w-full px-8 md:px-12 pt-2 pb-4 bg-white relative border-t border-gray-100">
+                            <h4 class="text-[#082f5d] font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <i class="ph-bold ph-chart-bar text-base"></i> Nilai Bobot Parameter
+                            </h4>
+                            <div class="w-full h-8 flex rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                                <div class="h-full bg-gradient-to-r from-[#FCD116] to-[#ffdb4d] flex items-center justify-start px-4 text-[#082f5d] font-black text-xs" style="width: 81.3%;">
+                                    <span>81.3%</span>
+                                </div>
+                                <div class="h-full bg-gradient-to-r from-[#c95a22] to-[#E36A2B] flex items-center justify-end px-3 text-white font-black text-xs" style="width: 18.7%;">
+                                    <span>18.7%</span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mt-2 px-1">
+                                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Sebaran Tujuan Penumpang</span>
+                                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Penggunaan Lahan</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl overflow-hidden shadow-xl">
+                    <button type="button" onclick="toggleDropdown('item-3')"
+                        class="w-full flex items-center justify-between px-6 py-5 text-left group transition-all duration-300"
+                        style="background:linear-gradient(135deg,#0a3b75,#082f5d);">
+                        <div class="flex items-center gap-5">
+                            <div
+                                style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#0369a1,#0284c7);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(3,105,161,0.3);">
+                                <span style="font-size:1.3rem;font-weight:900;color:white;">03</span>
+                            </div>
+                            <div>
+                                <p
+                                    style="color:rgba(56,189,248,0.8);font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px;">
+                                    Parameter Ketiga</p>
+                                <h3 class="text-2xl md:text-3xl font-bold text-white tracking-wide">Design</h3>
+                            </div>
+                        </div>
+                        <div
+                            style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i id="icon-item-3"
+                                class="ph ph-caret-right text-2xl text-white transition-transform duration-300"></i>
+                        </div>
+                    </button>
+                    <div id="item-3"
+                        class="max-h-0 overflow-hidden transition-[max-height] duration-500 ease-in-out bg-white">
+                        <div class="flex flex-col md:flex-row w-full min-h-[400px]">
+                            <div class="w-full md:w-1/2 bg-[#FCD116] relative flex overflow-hidden">
+                                <div id="item-3-left-text"
+                                    class="w-full p-8 md:p-12 flex flex-col justify-center transition-all duration-500 ease-in-out opacity-100 scale-100 pointer-events-auto">
+                                    <h4 class="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
+                                        Infrastruktur<br>Pejalan Kaki</h4>
+                                    <p class="text-white text-base md:text-lg font-medium mb-8 leading-relaxed">
+                                        Digunakan untuk mengidentifikasi ketersediaan infrastruktur bagi pejalan kaki.
+                                        Semakin banyak infrastruktur pejalan kaki maka semakin tinggi potensi kawasan
+                                        tersebut.</p>
+                                    <button id="item-3-left-btn" onclick="toggleMap('item-3', 'left')"
+                                        class="bg-[#E36A2B] hover:bg-[#c95a22] text-white font-bold text-xl py-3 px-8 w-max rounded-lg transition-all shadow-lg hover:-translate-y-1"><i
+                                            class="ph-bold ph-map-trifold mr-2"></i>Lihat Peta</button>
+                                </div>
+                                <div id="item-3-left-map"
+                                    class="absolute inset-0 bg-white p-0 border-r-2 border-white/20 transition-all duration-500 ease-in-out opacity-0 scale-95 pointer-events-none z-10">
+                                    <div id="map-jangkauan" class="w-full h-full z-0"></div>
+                                </div>
+                            </div>
+                            <div class="w-full md:w-1/2 bg-[#E36A2B] relative flex overflow-hidden">
+                                <div id="item-3-right-text"
+                                    class="w-full p-8 md:p-12 flex flex-col justify-center transition-all duration-500 ease-in-out opacity-100 scale-100 pointer-events-auto">
+                                    <h4 class="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
+                                        Jangkauan<br>Jalan</h4>
+                                    <p class="text-white text-base md:text-lg font-medium mb-8 leading-relaxed">
+                                        Digunakan untuk mengidentifikasi kemudahan akses jalan dari wilayah sekolah dan
+                                        permukiman masyarakat menuju jalan utama/trayek.</p>
+                                    <button id="item-3-right-btn" onclick="toggleMap('item-3', 'right')"
+                                        class="bg-[#FCD116] hover:bg-[#e0a800] text-[#003d7a] font-bold text-xl py-3 px-8 w-max rounded-lg transition-all shadow-lg hover:-translate-y-1"><i
+                                            class="ph-bold ph-map-trifold mr-2"></i>Lihat Peta</button>
+                                </div>
+                                <div id="item-3-right-map"
+                                    class="absolute inset-0 bg-white p-0 border-l-2 border-white/20 transition-all duration-500 ease-in-out opacity-0 scale-95 pointer-events-none z-10">
+                                    <div id="map-infrastruktur" class="w-full h-full z-0"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Chart Bobot AHP Item 3 -->
+                        <div class="w-full px-8 md:px-12 pt-2 pb-4 bg-white relative border-t border-gray-100">
+                            <h4 class="text-[#082f5d] font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <i class="ph-bold ph-chart-bar text-base"></i> Nilai Bobot Parameter
+                            </h4>
+                            <div class="w-full h-8 flex rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                                <div class="h-full bg-gradient-to-r from-[#FCD116] to-[#ffdb4d] flex items-center justify-start px-4 text-[#082f5d] font-black text-xs" style="width: 82.7%;">
+                                    <span>82.7%</span>
+                                </div>
+                                <div class="h-full bg-gradient-to-r from-[#c95a22] to-[#E36A2B] flex items-center justify-end px-3 text-white font-black text-xs" style="width: 17.3%;">
+                                    <span>17.3%</span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mt-2 px-1">
+                                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Infrastruktur Pejalan Kaki</span>
+                                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Jangkauan Jalan</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-14 reveal-on-scroll rounded-3xl overflow-hidden shadow-2xl"
+                style="background:linear-gradient(135deg,#0a3b75 0%,#0369a1 50%,#082f5d 100%);border:1px solid rgba(255,255,255,0.15);">
+                <div class="flex flex-col md:flex-row items-center gap-8 p-8 md:p-10">
+                    <div class="flex-1">
+                        <p class="text-[#FCD116] text-sm font-bold tracking-widest uppercase mb-2">&#10022; Metode
+                            Analisis</p>
+                        <h3 class="text-2xl md:text-3xl font-bold text-white leading-tight mb-3">Ditentukan menggunakan
+                            <span class="text-[#FCD116]">Analytical Hierarchy Process (AHP)</span></h3>
+                        <p class="text-white/70 text-base leading-relaxed">Titik rekomendasi halte baru pada Rute Timur ditentukan secara ilmiah menggunakan metode penjumlahan berbobot (<i>Weighted Sum</i>). Parameter yang diperhitungkan mencakup <strong>Density (49.3%)</strong>, <strong>Diversity (27.5%)</strong>, dan <strong>Design (23.2%)</strong> untuk menghasilkan lokasi yang optimal.</p>
+                    </div>
+                    <div class="flex-shrink-0 flex flex-col items-center">
+                        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:24px;padding:20px;width:240px;backdrop-blur:10px;box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+                            <div class="flex justify-center mb-5 relative w-40 h-40 mx-auto" onmouseleave="resetPieValue()">
+                                <svg viewBox="0 0 42 42" class="w-full h-full drop-shadow-2xl" style="transform: rotate(-90deg); overflow:visible;">
+                                    <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="rgba(255,255,255,0.05)" stroke-width="10"></circle>
+                                    
+                                    <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#FCD116" stroke-width="6" stroke-dasharray="48.3 100" stroke-dashoffset="0"
+                                        style="cursor:pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: center;"
+                                        onmouseover="this.setAttribute('stroke-width', '9'); this.style.filter='drop-shadow(0 0 4px #FCD116)'; showPieValue('Density', '49.3%', '#FCD116')"
+                                        onmouseout="this.setAttribute('stroke-width', '6'); this.style.filter='none'"></circle>
+
+                                    <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#E36A2B" stroke-width="6" stroke-dasharray="26.5 100" stroke-dashoffset="-49.3"
+                                        style="cursor:pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: center;"
+                                        onmouseover="this.setAttribute('stroke-width', '9'); this.style.filter='drop-shadow(0 0 4px #E36A2B)'; showPieValue('Diversity', '27.5%', '#E36A2B')"
+                                        onmouseout="this.setAttribute('stroke-width', '6'); this.style.filter='none'"></circle>
+
+                                    <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#38bdf8" stroke-width="6" stroke-dasharray="22.2 100" stroke-dashoffset="-76.8"
+                                        style="cursor:pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: center;"
+                                        onmouseover="this.setAttribute('stroke-width', '9'); this.style.filter='drop-shadow(0 0 4px #38bdf8)'; showPieValue('Design', '23.2%', '#38bdf8')"
+                                        onmouseout="this.setAttribute('stroke-width', '6'); this.style.filter='none'"></circle>
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span id="pie-val-name" class="text-[11px] font-bold text-white/80 transition-colors uppercase tracking-widest mt-0.5">Bobot</span>
+                                    <span id="pie-val-num" class="text-base font-black text-[#FCD116] transition-colors">AHP</span>
+                                </div>
+                            </div>
+                            <script>
+                                function showPieValue(name, value, color) {
+                                    const nameEl = document.getElementById('pie-val-name');
+                                    const numEl = document.getElementById('pie-val-num');
+                                    if(nameEl && numEl) {
+                                        nameEl.innerText = name;
+                                        numEl.innerText = value;
+                                        numEl.style.color = color;
+                                    }
+                                }
+                                function resetPieValue() {
+                                    const nameEl = document.getElementById('pie-val-name');
+                                    const numEl = document.getElementById('pie-val-num');
+                                    if(nameEl && numEl) {
+                                        nameEl.innerText = "Bobot";
+                                        numEl.innerText = "AHP";
+                                        numEl.style.color = "#FCD116";
+                                    }
+                                }
+                            </script>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-14 reveal-on-scroll">
+                <div id="webgis-iframe-container"
+                    class="w-full max-w-6xl mx-auto aspect-video rounded-3xl shadow-2xl overflow-hidden relative group"
+                    style="border:2px solid rgba(255,255,255,0.2);">
+                    <iframe id="webgis-iframe" src="peta.html?embed=true" class="w-full h-full border-none"
+                        allowfullscreen loading="lazy"></iframe>
+                    <div id="map-overlay"
+                        class="absolute inset-0 z-20 flex flex-col items-center justify-center transition-opacity duration-700"
+                        style="background: linear-gradient(135deg, rgba(0,82,156,0.55) 0%, rgba(232,120,24,0.35) 60%, rgba(0,30,80,0.65) 100%); backdrop-filter: blur(2px);">
+                        <div
+                            style="position:absolute;top:10%;left:8%;width:120px;height:120px;background:rgba(252,192,22,0.20);border-radius:50%;filter:blur(30px);pointer-events:none;">
+                        </div>
+                        <div
+                            style="position:absolute;bottom:15%;right:10%;width:160px;height:160px;background:rgba(232,120,24,0.22);border-radius:50%;filter:blur(40px);pointer-events:none;">
+                        </div>
+                        <div
+                            style="background:rgba(255,255,255,0.10); border:1.5px solid rgba(255,255,255,0.25); backdrop-filter:blur(6px); border-radius:24px; padding:36px 40px; display:flex; flex-direction:column; align-items:center; box-shadow:0 8px 40px rgba(0,0,0,0.25);">
+                            <div style="display:flex; flex-direction:column; align-items:center; margin-bottom:16px;">
+                                <div
+                                    style="background:linear-gradient(135deg,#38bdf8,#0369a1); width:48px; height:48px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); display:flex; align-items:center; justify-content:center; border:3px solid white; box-shadow:0 4px 16px rgba(3,105,161,0.5);">
+                                    <i class="ph-fill ph-bus"
+                                        style="transform:rotate(45deg); color:white; font-size:20px;"></i>
+                                </div>
+                            </div>
+                            <h2
+                                style="color:white; font-size:clamp(1.25rem,3vw,2.25rem); font-weight:800; text-align:center; line-height:1.3; margin-bottom:6px; text-shadow:0 2px 12px rgba(0,0,0,0.4);">
+                                Hasil Rekomendasi Halte</h2>
+                            <p
+                                style="color:#FCC016; font-size:clamp(1rem,2.5vw,1.6rem); font-weight:700; text-align:center; margin-bottom:24px; text-shadow:0 2px 8px rgba(0,0,0,0.3); letter-spacing:0.02em;">
+                                Rute Timur</p>
+                            <button id="btn-buka-peta"
+                                style="background:linear-gradient(135deg,#E3242B,#b91c22); color:white; font-weight:700; padding:12px 32px; border-radius:50px; border:2px solid rgba(255,255,255,0.4); display:flex; align-items:center; gap:10px; font-size:1.05rem; box-shadow:0 4px 20px rgba(227,36,43,0.5); cursor:pointer; transition:transform 0.2s, box-shadow 0.2s;"
+                                onmouseover="this.style.transform='scale(1.07)';this.style.boxShadow='0 8px 28px rgba(227,36,43,0.65)'"
+                                onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 20px rgba(227,36,43,0.5)'">
+                                <i class="ph-bold ph-map-trifold" style="font-size:22px;"></i> Lihat Peta
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const iframe = document.getElementById('webgis-iframe');
+                    const btnBuka = document.getElementById('btn-buka-peta');
+                    const overlay = document.getElementById('map-overlay');
+                    let hasOpened = false;
+                    if (btnBuka && iframe && overlay) {
+                        btnBuka.addEventListener('click', () => {
+                            hasOpened = true;
+                            overlay.style.opacity = '0';
+                            overlay.style.pointerEvents = 'none';
+                            setTimeout(() => { overlay.style.display = 'none'; }, 700);
+                            if (iframe.contentWindow) { iframe.contentWindow.postMessage('playAHP', '*'); }
+                        });
+                        const container = document.getElementById('webgis-iframe-container');
+                        if (container) {
+                            const observer = new IntersectionObserver((entries) => {
+                                entries.forEach(entry => {
+                                    if (!entry.isIntersecting && hasOpened) {
+                                        hasOpened = false;
+                                        overlay.style.display = 'flex';
+                                        overlay.offsetHeight;
+                                        overlay.style.opacity = '1';
+                                        overlay.style.pointerEvents = 'auto';
+                                        if (iframe.contentWindow) { iframe.contentWindow.postMessage('resetMap', '*'); }
+                                    }
+                                });
+                            }, { threshold: 0.0 });
+                            observer.observe(container);
+                        }
+                    }
+                    const revealEls = document.querySelectorAll('.reveal-on-scroll');
+                    const revealObserver = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) { entry.target.classList.add('revealed'); revealObserver.unobserve(entry.target); }
+                        });
+                    }, { threshold: 0.1 });
+                    revealEls.forEach(el => revealObserver.observe(el));
+                });
+            </script>
+            <style>
+                .reveal-on-scroll {
+                    opacity: 0;
+                    transform: translateY(32px);
+                    transition: opacity 0.7s ease, transform 0.7s ease;
+                }
+
+                .reveal-on-scroll.revealed {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            </style>
+        </div>
+    </section>
+
+    <div style="background:#00529C;line-height:0;overflow:hidden;margin-bottom:-1px;position:relative;z-index:10;">
+        <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"
+            style="display:block; width:100%; height:60px;">
+            <path fill="#003d7a" d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z">
+                <animate attributeName="d" dur="5s" repeatCount="indefinite"
+                    values="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z; M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z; M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" />
+            </path>
+            <path fill="#003d7a" d="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z">
+                <animate attributeName="d" dur="7s" repeatCount="indefinite"
+                    values="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z; M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z; M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z" />
+            </path>
+        </svg>
+    </div>
+
+    <section id="sdgs-section" class="py-24 px-4 md:px-8 lg:px-12 relative overflow-hidden" style="background:#003d7a;">
+        <div
+            style="position:absolute;top:20px;left:-80px;width:300px;height:300px;background:radial-gradient(circle,rgba(252,209,22,0.1) 0%,transparent 70%);pointer-events:none;">
+        </div>
+        <div class="max-w-[80%] 2xl:max-w-[1600px] mx-auto relative z-10">
+            <div class="text-center mb-16 reveal-on-scroll">
+                <span
+                    style="background:rgba(252,209,22,0.15);border:1px solid rgba(252,209,22,0.4);color:#FCD116;font-size:0.85rem;font-weight:700;letter-spacing:0.12em;padding:6px 20px;border-radius:50px;display:inline-block;margin-bottom:16px;text-transform:uppercase;">&#10022;
+                    Dampak Berkelanjutan</span>
+                <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">Mendukung Tujuan SDGs</h2>
+                <p class="text-white/70 text-base md:text-lg leading-relaxed max-w-2xl mx-auto">Platform ini dirancang
+                    untuk berkontribusi langsung pada 3 target Sustainable Development Goals.</p>
+            </div>
+
+            <div class="grid gap-8 md:grid-cols-3 reveal-on-scroll">
+                <div class="group bg-[#001a3d]/40 border border-white/10 p-8 rounded-3xl hover:border-[#E3242B]/50 transition-all duration-300 relative overflow-hidden"
+                    style="box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                    <div
+                        class="absolute -right-6 -top-6 w-32 h-32 bg-[#E3242B]/10 rounded-full blur-2xl group-hover:bg-[#E3242B]/20 transition-all">
+                    </div>
+                    <img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-04.jpg" alt="SDG 4"
+                        class="w-16 h-auto rounded-xl mb-6 shadow-md"
+                        style="box-shadow:0 8px 20px rgba(197,25,45,0.4);">
+                    <h3 class="text-xl font-bold text-white mb-3">Pendidikan Berkualitas <span
+                            class="text-[#FCD116] text-xs px-2 py-1 bg-white/10 rounded-full ml-2 align-middle">CORE</span>
+                    </h3>
+                    <p class="text-white/70 text-sm leading-relaxed">Menjamin pendidikan yang inklusif dan merata, serta
+                        mendukung kesempatan belajar sepanjang hayat dengan kemudahan akses transportasi sekolah.</p>
+                </div>
+
+                <div class="group bg-[#001a3d]/40 border border-white/10 p-8 rounded-3xl hover:border-[#FCD116]/50 transition-all duration-300 relative overflow-hidden"
+                    style="box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                    <div
+                        class="absolute -right-6 -top-6 w-32 h-32 bg-[#FCD116]/10 rounded-full blur-2xl group-hover:bg-[#FCD116]/20 transition-all">
+                    </div>
+                    <img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-11.jpg" alt="SDG 11"
+                        class="w-16 h-auto rounded-xl mb-6 shadow-md"
+                        style="box-shadow:0 8px 20px rgba(253,157,36,0.4);">
+                    <h3 class="text-xl font-bold text-white mb-3">Kota &amp; Permukiman Berkelanjutan</h3>
+                    <p class="text-white/70 text-sm leading-relaxed">Menjadikan kota dan permukiman inklusif, aman,
+                        tangguh dan berkelanjutan dengan menyediakan sistem transportasi umum yang aman, terjangkau, dan
+                        dapat diakses.</p>
+                </div>
+
+                <div class="group bg-[#001a3d]/40 border border-white/10 p-8 rounded-3xl hover:border-[#4ade80]/50 transition-all duration-300 relative overflow-hidden"
+                    style="box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                    <div
+                        class="absolute -right-6 -top-6 w-32 h-32 bg-[#4ade80]/10 rounded-full blur-2xl group-hover:bg-[#4ade80]/20 transition-all">
+                    </div>
+                    <img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-13.jpg" alt="SDG 13"
+                        class="w-16 h-auto rounded-xl mb-6 shadow-md"
+                        style="box-shadow:0 8px 20px rgba(63,126,68,0.4);">
+                    <h3 class="text-xl font-bold text-white mb-3">Penanganan Perubahan Iklim</h3>
+                    <p class="text-white/70 text-sm leading-relaxed">Mengambil tindakan cepat untuk mengatasi perubahan
+                        iklim melalui pengurangan emisi karbon dengan mendorong penggunaan kendaraan umum pelajar.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div style="background:#003d7a;line-height:0;overflow:hidden;margin-bottom:-1px;position:relative;z-index:10;">
+        <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"
+            style="display:block; width:100%; height:60px;">
+            <path fill="#002d6b" d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z">
+                <animate attributeName="d" dur="5s" repeatCount="indefinite"
+                    values="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z; M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z; M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" />
+            </path>
+            <path fill="#002d6b" d="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z">
+                <animate attributeName="d" dur="7s" repeatCount="indefinite"
+                    values="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z; M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z; M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z" />
+            </path>
+        </svg>
+    </div>
+
+    <!-- Combined Information and Footer Section -->
+    <section id="additional-info" class="relative py-24 px-4 md:px-8 lg:px-12 overflow-hidden scroll-mt-20"
+        style="background:linear-gradient(to bottom,#002d6b 0%,#001a3d 100%);">
+        <div class="max-w-[80%] 2xl:max-w-[1600px] mx-auto relative z-10 mb-20">
+            <div class="mb-10 reveal-on-scroll">
+                <p class="text-[#FCD116] text-sm font-bold mb-2">Tentang</p>
+                <h2 class="text-4xl md:text-5xl font-black text-white">Informasi Tambahan</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 relative">
+                <!-- Detail Kontak (Left) -->
+                <div
+                    class="bg-[#002d6b]/80 border border-white/10 rounded-3xl p-6 md:p-8 flex flex-col gap-4 shadow-2xl reveal-on-scroll">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-1.5 h-5 bg-[#FCD116] rounded-full"></div>
+                        <h3 class="text-white font-bold text-lg">Detail Kontak</h3>
+                    </div>
+
+                    <!-- Item 1: Institusi -->
+                    <div
+                        class="bg-[#001a3d]/60 border border-white/5 rounded-2xl p-4 flex items-center gap-4 transition-colors hover:bg-[#001a3d]">
+                        <div class="w-12 h-12 bg-[#00529C]/40 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="ph-fill ph-bank text-white text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-white/50 text-xs font-medium mb-1">Institusi</p>
+                            <p class="text-white font-semibold text-sm">Teknik Geomatika - Institut Teknologi Sepuluh
+                                Nopember</p>
+                        </div>
+                    </div>
+
+                    <!-- Item 2: Contact Person -->
+                    <div
+                        class="bg-[#001a3d]/60 border border-white/5 rounded-2xl p-4 flex items-center gap-4 transition-colors hover:bg-[#001a3d]">
+                        <div class="w-12 h-12 bg-[#00529C]/40 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="ph-fill ph-phone text-[#E36A2B] text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-white/50 text-xs font-medium mb-1">Contact</p>
+                            <p class="text-white font-semibold text-sm">Kelompok 23 Field Camp 2026</p>
+                        </div>
+                    </div>
+
+                    <!-- Item 3: Instagram -->
+                    <a href="https://www.instagram.com/sirubionroute?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                        target="_blank"
+                        class="bg-[#001a3d]/60 border border-white/5 rounded-2xl p-4 flex items-center gap-4 transition-colors hover:bg-[#001a3d] cursor-pointer block">
+                        <div class="w-12 h-12 bg-[#00529C]/40 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="ph-fill ph-instagram-logo text-[#FCD116] text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-white/50 text-xs font-medium mb-1">Instagram</p>
+                            <p class="text-white font-semibold text-sm">@sirubionroute</p>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Right Column -->
+                <div class="flex flex-col gap-6 reveal-on-scroll">
+                    <!-- Tim Developer -->
+                    <div
+                        class="bg-[#002d6b]/80 border border-white/10 rounded-3xl p-8 flex flex-col justify-center flex-1 shadow-2xl relative overflow-hidden transition-all duration-300 min-h-[220px]">
+
+                        <!-- Summary View -->
+                        <div id="dev-summary"
+                            class="flex flex-col items-center justify-center w-full text-center transition-all duration-300">
+                            <div class="flex -space-x-4 mb-6">
+                                <div
+                                    class="w-14 h-14 rounded-full bg-[#4ade80] border-[3px] border-[#002d6b] flex items-center justify-center text-[#001a3d] font-bold text-base z-50 overflow-hidden relative shadow-sm">
+                                    <span>I</span><img src="images/Indhira.JPG"
+                                        class="absolute inset-0 w-full h-full object-cover object-top z-10"
+                                        onerror="this.style.display='none'"></div>
+                                <div
+                                    class="w-14 h-14 rounded-full bg-[#38bdf8] border-[3px] border-[#002d6b] flex items-center justify-center text-[#001a3d] font-bold text-base z-40 overflow-hidden relative shadow-sm">
+                                    <span>F</span><img src="images/Faiz.JPG"
+                                        class="absolute inset-0 w-full h-full object-cover object-top z-10"
+                                        onerror="this.style.display='none'"></div>
+                                <div
+                                    class="w-14 h-14 rounded-full bg-[#00529C] border-[3px] border-[#002d6b] flex items-center justify-center text-white font-bold text-base z-30 overflow-hidden relative shadow-sm">
+                                    <span>N</span><img src="images/Naris.JPG"
+                                        class="absolute inset-0 w-full h-full object-cover object-top z-10"
+                                        onerror="this.style.display='none'"></div>
+                                <div
+                                    class="w-14 h-14 rounded-full bg-[#FCD116] border-[3px] border-[#002d6b] flex items-center justify-center text-[#001a3d] font-bold text-base z-20 overflow-hidden relative shadow-sm">
+                                    <span>R</span><img src="images/Rey.JPG"
+                                        class="absolute inset-0 w-full h-full object-cover object-top z-10"
+                                        onerror="this.style.display='none'"></div>
+                                <div
+                                    class="w-14 h-14 rounded-full bg-[#E36A2B] border-[3px] border-[#002d6b] flex items-center justify-center text-white font-bold text-base z-10 overflow-hidden relative shadow-sm">
+                                    <span>T</span><img src="images/Teara.JPG"
+                                        class="absolute inset-0 w-full h-full object-cover object-top z-10"
+                                        onerror="this.style.display='none'"></div>
+                            </div>
+                            <h3 class="text-white font-bold text-xl mb-1.5">Tim Developer</h3>
+                            <p class="text-white/70 text-sm mb-6">Kelompok 23 Field Camp 2026</p>
+                            <button
+                                onclick="document.getElementById('full-dev-list').style.display='flex'; setTimeout(() => { document.getElementById('full-dev-list').style.opacity='1'; document.getElementById('full-dev-list').style.pointerEvents='auto'; }, 10);"
+                                class="bg-[#FCD116] hover:bg-[#e0a800] text-[#001a3d] font-bold py-2.5 px-6 rounded-full transition-colors text-sm cursor-pointer shadow-lg">Lihat
+                                Profil ></button>
+                        </div>
+                    </div>
+
+                    <!-- Buku Panduan -->
+                    <a href="https://drive.google.com/drive/folders/1RDs2aZybCiHWg6VYAo92_a54-Yas0yXf?usp=drive_link" target="_blank"
+                        class="bg-[#002d6b]/80 border border-white/10 rounded-3xl p-4 flex items-center gap-4 hover:bg-[#001a3d] transition-colors cursor-pointer shadow-2xl">
+                        <div class="w-12 h-12 bg-[#00529C]/40 rounded-xl flex items-center justify-center shrink-0">
+                            <i class="ph-fill ph-file-text text-[#FCD116] text-2xl"></i>
+                        </div>
+                        <div class="flex-1 overflow-hidden">
+                            <p class="text-white/50 text-[10px] font-medium mb-1">Buku Panduan</p>
+                            <p class="text-white font-semibold text-xs leading-tight">Panduan Penggunaan SiRubi<br>- PDF
+                            </p>
+                        </div>
+                        <i class="ph-bold ph-arrow-down text-[#FCD116] mr-2 text-sm"></i>
+                    </a>
+                </div>
+
+                <!-- Overlay List View (Hidden initially, covers entire grid) -->
+                <div id="full-dev-list"
+                    class="flex-col w-full h-full text-left absolute inset-0 bg-[#001a3d]/95 backdrop-blur-md p-8 lg:p-12 z-50 rounded-3xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-500 ease-in-out"
+                    style="display: none; opacity: 0; pointer-events: none;">
+                    <div
+                        class="flex items-center justify-between w-full mb-8 sticky top-0 z-30 bg-[#001a3d]/90 backdrop-blur-sm pb-4">
+                        <h4 class="text-[#FCD116] font-bold text-2xl tracking-wide">Profil Tim Developer</h4>
+                        <button
+                            onclick="document.getElementById('full-dev-list').style.opacity='0'; document.getElementById('full-dev-list').style.pointerEvents='none'; setTimeout(()=>{document.getElementById('full-dev-list').style.display='none';}, 500);"
+                            class="text-white/70 hover:text-white bg-white/10 hover:bg-white/20 w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-md"><i
+                                class="ph-bold ph-x text-xl"></i></button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6 w-full">
+                        <div
+                            class="flex items-center gap-4 w-full bg-white/5 border border-white/5 p-4 rounded-2xl hover:bg-white/10 hover:-translate-y-1 transition-all shadow-lg group">
+                            <div
+                                class="w-16 h-16 rounded-full bg-[#4ade80] flex items-center justify-center text-[#001a3d] font-bold text-2xl shrink-0 overflow-hidden relative shadow-inner group-hover:shadow-[0_0_15px_#4ade80] transition-shadow">
+                                <span>I</span><img src="images/Indhira.JPG"
+                                    class="absolute inset-0 w-full h-full object-cover object-top z-10"
+                                    onerror="this.style.display='none'"></div>
+                            <div>
+                                <p class="text-white text-base font-bold">Tsabhita Indhira</p>
+                                <p class="text-white/50 text-xs mt-1">5016231025</p>
+                            </div>
+                        </div>
+                        <div
+                            class="flex items-center gap-4 w-full bg-white/5 border border-white/5 p-4 rounded-2xl hover:bg-white/10 hover:-translate-y-1 transition-all shadow-lg group">
+                            <div
+                                class="w-16 h-16 rounded-full bg-[#38bdf8] flex items-center justify-center text-[#001a3d] font-bold text-2xl shrink-0 overflow-hidden relative shadow-inner group-hover:shadow-[0_0_15px_#38bdf8] transition-shadow">
+                                <span>F</span><img src="images/Faiz.JPG"
+                                    class="absolute inset-0 w-full h-full object-cover object-top z-10"
+                                    onerror="this.style.display='none'"></div>
+                            <div>
+                                <p class="text-white text-base font-bold">Muhammad Faiz</p>
+                                <p class="text-white/50 text-xs mt-1">5016231050</p>
+                            </div>
+                        </div>
+                        <div
+                            class="flex items-center gap-4 w-full bg-white/5 border border-white/5 p-4 rounded-2xl hover:bg-white/10 hover:-translate-y-1 transition-all shadow-lg group">
+                            <div
+                                class="w-16 h-16 rounded-full bg-[#00529C] flex items-center justify-center text-white font-bold text-2xl shrink-0 overflow-hidden relative shadow-inner group-hover:shadow-[0_0_15px_#00529C] transition-shadow">
+                                <span>N</span><img src="images/Naris.JPG"
+                                    class="absolute inset-0 w-full h-full object-cover object-top z-10"
+                                    onerror="this.style.display='none'"></div>
+                            <div>
+                                <p class="text-white text-base font-bold">Nariswari Nasywa</p>
+                                <p class="text-white/50 text-xs mt-1">5016231108</p>
+                            </div>
+                        </div>
+                        <div
+                            class="flex items-center gap-4 w-full bg-white/5 border border-white/5 p-4 rounded-2xl hover:bg-white/10 hover:-translate-y-1 transition-all shadow-lg group">
+                            <div
+                                class="w-16 h-16 rounded-full bg-[#FCD116] flex items-center justify-center text-[#001a3d] font-bold text-2xl shrink-0 overflow-hidden relative shadow-inner group-hover:shadow-[0_0_15px_#FCD116] transition-shadow">
+                                <span>R</span><img src="images/Rey.JPG"
+                                    class="absolute inset-0 w-full h-full object-cover object-top z-10"
+                                    onerror="this.style.display='none'"></div>
+                            <div>
+                                <p class="text-white text-base font-bold">Muhammad Raihan</p>
+                                <p class="text-white/50 text-xs mt-1">5016231117</p>
+                            </div>
+                        </div>
+                        <div
+                            class="flex items-center gap-4 w-full bg-white/5 border border-white/5 p-4 rounded-2xl hover:bg-white/10 hover:-translate-y-1 transition-all shadow-lg group">
+                            <div
+                                class="w-16 h-16 rounded-full bg-[#E36A2B] flex items-center justify-center text-white font-bold text-2xl shrink-0 overflow-hidden relative shadow-inner group-hover:shadow-[0_0_15px_#E36A2B] transition-shadow">
+                                <span>T</span><img src="images/Teara.JPG"
+                                    class="absolute inset-0 w-full h-full object-cover object-top z-10"
+                                    onerror="this.style.display='none'"></div>
+                            <div>
+                                <p class="text-white text-base font-bold">Teara Clarissa</p>
+                                <p class="text-white/50 text-xs mt-1">5016231124</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="max-width:700px;margin:0 auto;text-align:center;" class="reveal-on-scroll">
+
+            <p style="color:rgba(255,255,255,0.3);font-size:0.8rem;margin-top:40px;">&#169; 2026 SiRubi &#8212; Sistem
+                Informasi Rute dan Halte Bus Sekolah Surabaya</p>
+        </div>
+    </section>
+
+
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const backdrop = document.getElementById('mobile-backdrop');
+
+            menu.classList.toggle('-translate-x-full');
+            backdrop.classList.toggle('hidden');
+        }
+
+        function toggleDropdown(id) {
+            const content = document.getElementById(id);
+            const icon = document.getElementById(`icon-${id}`);
+            const isOpen = content.classList.contains('open');
+
+            document.querySelectorAll('#feature-list > div > div[id^="item-"]').forEach((panel) => {
+                panel.classList.remove('open');
+                panel.style.maxHeight = '0';
+            });
+            document.querySelectorAll('#feature-list i[id^="icon-item-"]').forEach((iconEl) => {
+                iconEl.classList.remove('rotate-90');
+            });
+
+            if (!isOpen) {
+                content.classList.add('open');
+                content.style.maxHeight = content.scrollHeight + 'px';
+                icon.classList.add('rotate-90');
+            }
+        }
+
+        // FUNGSI BARU: Transisi Fluid Tanpa Menggunakan 'hidden'
+        function toggleMap(itemId, clickedSide) {
+            const leftText = document.getElementById(`${itemId}-left-text`);
+            const leftMap = document.getElementById(`${itemId}-left-map`);
+            const leftBtn = document.getElementById(`${itemId}-left-btn`);
+
+            const rightText = document.getElementById(`${itemId}-right-text`);
+            const rightMap = document.getElementById(`${itemId}-right-map`);
+            const rightBtn = document.getElementById(`${itemId}-right-btn`);
+
+            if (clickedSide === 'left') {
+                // Mengecek apakah peta di sebelah kanan sedang aktif (opasitas 100)
+                const isMapShowing = rightMap.classList.contains('opacity-100');
+
+                if (isMapShowing) {
+                    // Sembunyikan Peta Kanan (Fade Out & Scale Down)
+                    rightMap.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                    rightMap.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+
+                    // Kembalikan Teks Kanan (Fade In & Scale Up)
+                    rightText.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                    rightText.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+
+                    leftBtn.innerText = 'Lihat Peta';
+                } else {
+                    // Sembunyikan Teks Kanan
+                    rightText.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                    rightText.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+
+                    // Munculkan Peta Kanan
+                    rightMap.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                    rightMap.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+
+                    if (itemId === 'item-1' && typeof mapPenduduk !== 'undefined') {
+                        setTimeout(() => {
+                            mapPenduduk.invalidateSize();
+                            mapPenduduk.setView([-7.280445, 112.768845], 12);
+                        }, 500);
+                    } else if (itemId === 'item-2' && typeof mapTujuan !== 'undefined') {
+                        setTimeout(() => {
+                            mapTujuan.invalidateSize();
+                            mapTujuan.setView([-7.280445, 112.768845], 12);
+                        }, 500);
+                    } else if (itemId === 'item-3' && typeof mapInfrastruktur !== 'undefined') {
+                        setTimeout(() => {
+                            mapInfrastruktur.invalidateSize();
+                            mapInfrastruktur.setView([-7.280445, 112.768845], 12);
+                        }, 500);
+                    }
+
+                    leftBtn.innerText = 'Kembali';
+
+                    // Reset Sisi Kiri ke kondisi awal (jika sebelumnya sedang membuka peta)
+                    leftMap.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                    leftMap.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                    leftText.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                    leftText.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+                    rightBtn.innerText = 'Lihat Peta';
+                }
+            }
+            else if (clickedSide === 'right') {
+                // Mengecek apakah peta di sebelah kiri sedang aktif
+                const isMapShowing = leftMap.classList.contains('opacity-100');
+
+                if (isMapShowing) {
+                    // Sembunyikan Peta Kiri
+                    leftMap.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                    leftMap.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+
+                    // Kembalikan Teks Kiri
+                    leftText.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                    leftText.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+
+                    rightBtn.innerText = 'Lihat Peta';
+                } else {
+                    // Sembunyikan Teks Kiri
+                    leftText.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                    leftText.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+
+                    // Munculkan Peta Kiri
+                    leftMap.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                    leftMap.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+
+                    if (itemId === 'item-1' && typeof mapNdbi !== 'undefined') {
+                        setTimeout(() => {
+                            mapNdbi.invalidateSize();
+                            mapNdbi.setView([-7.280445, 112.768845], 12);
+                        }, 500);
+                    } else if (itemId === 'item-2' && typeof mapEntropy !== 'undefined') {
+                        setTimeout(() => {
+                            mapEntropy.invalidateSize();
+                            mapEntropy.setView([-7.280445, 112.768845], 12);
+                        }, 500);
+                    } else if (itemId === 'item-3' && typeof mapJangkauan !== 'undefined') {
+                        setTimeout(() => {
+                            mapJangkauan.invalidateSize();
+                            mapJangkauan.setView([-7.280445, 112.768845], 12);
+                        }, 500);
+                    }
+
+                    rightBtn.innerText = 'Kembali';
+
+                    // Reset Sisi Kanan ke kondisi awal
+                    rightMap.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                    rightMap.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                    rightText.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                    rightText.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+                    leftBtn.innerText = 'Lihat Peta';
+                }
+            }
+        }
+        const movingBus = document.getElementById('bus-moving');
+
+        window.addEventListener('scroll', function () {
+            const scrollY = window.scrollY;
+
+            if (movingBus) {
+                // Batasi kalkulasi jika halaman sudah di-scroll terlalu jauh
+                if (scrollY > 800) {
+                    movingBus.style.opacity = '0';
+                    return;
+                }
+
+                // --- LOGIKA GERAK ISOMETRIK ---
+                // Angka pengali dikecilkan karena ruang gerak gambar sekarang lebih sempit
+                const moveX = scrollY * -0.7; // Kecepatan laju ke kiri
+                const moveY = scrollY * 0.4;  // Kecepatan laju ke bawah (menyesuaikan sudut isometrik)
+
+                // Efek scale opsional dihapus agar bus tidak tiba-tiba terlihat raksasa saat turun
+
+                // --- LOGIKA TRANSISI MENGHILANG (FADE OUT) VIA OPACITY ---
+                let opacity = 1;
+                if (scrollY > 100) {
+                    // Bus mulai memudar setelah scroll 100px, lenyap di 400px
+                    opacity = 1 - (scrollY - 100) / 300;
+                    if (opacity < 0) opacity = 0;
+                }
+
+                // Terapkan pergerakan dan opasitas
+                movingBus.style.transform = `translate(${moveX}px, ${moveY}px)`;
+                movingBus.style.opacity = opacity;
+            }
+        });
+
+        // Inisialisasi Peta NDBI (Kepadatan Bangunan)
+        const mapNdbi = L.map('map-ndbi', { zoomControl: false, attributionControl: false }).setView([-7.280445, 112.768845], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapNdbi);
+
+        // Fetch NDBI GeoJSON
+        fetch('TOD/ndbi.geojson')
+            .then(response => response.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: function (feature) {
+                        let d = feature.properties.gridcode;
+                        let color = d === 4 ? '#ff0000' : // Bangunan Sangat Rapat (Merah)
+                            d === 3 ? '#ffa500' : // Bangunan Rapat (Oranye)
+                                d === 2 ? '#ffff00' : // Bangunan Jarang (Kuning)
+                                    d === 1 ? '#008000' : '#cccccc'; // Vegetasi (Hijau)
+                        return { color: color, weight: 1, fillColor: color, fillOpacity: 0.8 };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        let d = feature.properties.gridcode;
+                        let label = d === 4 ? 'Sangat Rapat' :
+                            d === 3 ? 'Rapat' :
+                                d === 2 ? 'Jarang' :
+                                    d === 1 ? 'Non Bangunan' : 'Lainnya';
+                        layer.bindPopup("<div class='font-bold text-gray-800 mb-1'>Kelas Kepadatan:</div><div class='text-sm'>" + label + "</div>");
+                    }
+                }).addTo(mapNdbi);
+            })
+            .catch(err => console.error('Gagal memuat NDBI:', err));
+
+        // Inisialisasi Peta Kepadatan Penduduk
+        const mapPenduduk = L.map('map-penduduk', { zoomControl: false, attributionControl: false }).setView([-7.280445, 112.768845], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapPenduduk);
+
+        // Fetch Kepadatan Penduduk GeoJSON
+        fetch('TOD/kepadatanpenduduk.geojson')
+            .then(response => response.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: function (feature) {
+                        let d = feature.properties.Kepadatan_Penduduk;
+                        // Simbologi 5 kelas sesuai dengan skema warna AHP di peta.html
+                        let color = d > 20000 ? '#ef4444' : // Sangat Tinggi
+                            d > 15000 ? '#f97316' : // Tinggi
+                                d > 11000 ? '#eab308' : // Sedang
+                                    d > 8000 ? '#84cc16' : // Rendah
+                                        '#22c55e';  // Sangat Rendah
+                        return { color: 'white', weight: 1, fillColor: color, fillOpacity: 0.8 };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        let d = feature.properties.Kepadatan_Penduduk;
+                        let kelurahan = feature.properties.NAMOBJ || 'Tidak Diketahui';
+
+                        let label = d > 20000 ? 'Sangat Tinggi' :
+                            d > 15000 ? 'Tinggi' :
+                                d > 11000 ? 'Sedang' :
+                                    d > 8000 ? 'Rendah' : 'Sangat Rendah';
+                        let bgColor = d > 20000 ? '#fee2e2; color: #b91c1c' :
+                            d > 15000 ? '#ffedd5; color: #c2410c' :
+                                d > 11000 ? '#fef9c3; color: #a16207' :
+                                    d > 8000 ? '#ecfccb; color: #4d7c0f' :
+                                        '#dcfce7; color: #15803d';
+
+                        layer.bindPopup(
+                            "<div class='font-bold text-gray-800 mb-2 border-b pb-1'>Informasi Wilayah</div>" +
+                            "<div class='mb-1'><span class='text-gray-600 text-xs'>Kelurahan:</span><br><span class='font-semibold text-sm'>" + kelurahan + "</span></div>" +
+                            "<div><span class='text-gray-600 text-xs'>Tingkat Kepadatan:</span><br><span class='inline-block px-2 py-1 rounded text-xs font-bold mt-1' style='background-color: " + bgColor.split(';')[0] + "; " + bgColor.split(';')[1] + "'>" + label + "</span></div>"
+                        );
+                    }
+                }).addTo(mapPenduduk);
+            })
+            .catch(err => console.error('Gagal memuat Kepadatan Penduduk:', err));
+
+        function getAhpStyle(feature) {
+            let d = feature.properties.gridcode;
+            let color = d === 5 ? '#ef4444' :
+                d === 4 ? '#f97316' :
+                    d === 3 ? '#eab308' :
+                        d === 2 ? '#84cc16' :
+                            d === 1 ? '#22c55e' : '#cccccc';
+            return { color: color, weight: 1, fillColor: color, fillOpacity: 0.8 };
+        }
+
+        function bindAhpPopup(feature, layer, title) {
+            let d = feature.properties.gridcode;
+            let label = d === 5 ? 'Sangat Tinggi' :
+                d === 4 ? 'Tinggi' :
+                    d === 3 ? 'Sedang' :
+                        d === 2 ? 'Rendah' :
+                            d === 1 ? 'Sangat Rendah' : 'Lainnya';
+            layer.bindPopup("<div class='font-bold text-gray-800 mb-1'>" + title + ":</div><div class='text-sm'>" + label + "</div>");
+        }
+
+        const mapInfrastruktur = L.map('map-infrastruktur', { zoomControl: false, attributionControl: false }).setView([-7.280445, 112.768845], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapInfrastruktur);
+        fetch('TOD/KDTitikSebrang.geojson')
+            .then(res => res.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: getAhpStyle,
+                    onEachFeature: function (f, l) { bindAhpPopup(f, l, 'Kelas Infrastruktur'); }
+                }).addTo(mapInfrastruktur);
+            }).catch(err => console.error(err));
+
+        const mapJangkauan = L.map('map-jangkauan', { zoomControl: false, attributionControl: false }).setView([-7.280445, 112.768845], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapJangkauan);
+        fetch('TOD/KDJalan.geojson')
+            .then(res => res.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: getAhpStyle,
+                    onEachFeature: function (f, l) { bindAhpPopup(f, l, 'Kelas Jangkauan'); }
+                }).addTo(mapJangkauan);
+            }).catch(err => console.error(err));
+
+        const mapEntropy = L.map('map-entropy', { zoomControl: false, attributionControl: false }).setView([-7.280445, 112.768845], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapEntropy);
+        fetch('TOD/Entropy.geojson')
+            .then(res => res.json())
+            .then(data => {
+                data.features.forEach(f => {
+                    let val = f.properties.VALUE;
+                    if (val !== undefined && val !== null) {
+                        f.properties.gridcode = parseInt(val);
+                    } else {
+                        f.properties.gridcode = 1;
+                    }
+                });
+                L.geoJSON(data, {
+                    style: getAhpStyle,
+                    onEachFeature: function (f, l) { bindAhpPopup(f, l, 'Penggunaan Lahan (Entropy)'); }
+                }).addTo(mapEntropy);
+            }).catch(err => console.error('Gagal memuat Entropy:', err));
+
+        const mapTujuan = L.map('map-tujuan', { zoomControl: false, attributionControl: false }).setView([-7.280445, 112.768845], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapTujuan);
+        fetch('TOD/tujuanpenumpang.json')
+            .then(res => res.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: getAhpStyle,
+                    onEachFeature: function (f, l) { bindAhpPopup(f, l, 'Sebaran Tujuan Penumpang'); }
+                }).addTo(mapTujuan);
+            }).catch(err => console.error(err));
+
+        fetch('TOD/DesaRuteTImur.json')
+            .then(response => response.json())
+            .then(data => {
+                const styleDef = {
+                    color: '#475569',
+                    weight: 1,
+                    opacity: 0.8,
+                    fillOpacity: 0,
+                    dashArray: '3, 4'
+                };
+                const onEachDef = function (feature, layer) {
+                    if (feature.properties && feature.properties.NAMOBJ) {
+                        layer.bindTooltip(feature.properties.NAMOBJ, {
+                            permanent: true,
+                            direction: 'center',
+                            className: 'desa-label-tooltip'
+                        });
+                    }
+                };
+
+                L.geoJSON(data, {
+                    style: styleDef,
+                    interactive: false,
+                    onEachFeature: onEachDef
+                }).addTo(mapPenduduk);
+
+                if (typeof mapEntropy !== 'undefined') {
+                    L.geoJSON(data, {
+                        style: styleDef,
+                        interactive: false,
+                        onEachFeature: onEachDef
+                    }).addTo(mapEntropy);
+                }
+            })
+            .catch(err => console.error('Gagal memuat Nama Desa:', err));
+
+    </script>
+</body>
+
+</html>

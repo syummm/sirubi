@@ -1,0 +1,225 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tentang | SiRubi Surabaya</title>
+
+    <!-- Menambahkan Favicon -->
+    <link rel="icon" type="image/png" href="logo.png">
+
+    <!-- Google Fonts: Kanit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col min-h-screen bg-[#00529C]">
+
+    <!-- HEADER -->
+    <header class="bg-[#FCD116] h-16 flex items-center justify-between px-4 md:px-6 shrink-0 z-50 shadow-md relative">
+        <div class="flex items-center gap-2 md:gap-4">
+            <button onclick="toggleMobileMenu()"
+                class="text-[#E3242B] p-1 rounded hover:bg-yellow-400 transition-colors focus:outline-none"
+                title="Buka Menu">
+                <i class="ph-bold ph-list text-2xl"></i>
+            </button>
+
+            <!-- Logo Kiri Atas -->
+            <img src="sirubi.png" alt="Logo SiRubi" class="h-8 md:h-10 object-contain"
+                onerror="this.src='https://via.placeholder.com/150x40/E3242B/FCD116?text=LOGO+ANDA'">
+            <div class="hidden lg:block h-8 md:h-10 border-l-2 border-[#E3242B]"></div>
+            <span class="text-[#E3242B] text-lg font-medium hidden lg:inline whitespace-nowrap">Sistem Informasi Rute
+                dan Halte Bus
+                Sekolah Surabaya</span>
+        </div>
+
+        <nav class="flex gap-2 sm:gap-3 md:gap-6 items-center">
+            <a href="index.html"
+                class="text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 hover:underline">Home</a>
+            <a href="peta.html"
+                class="text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 hover:underline">WebGIS</a>
+            <a href="https://bussekolah.surabaya.go.id/register" target="_blank" rel="noopener noreferrer"
+                class="hidden md:inline text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 hover:underline">Daftar</a>
+            <a href="tentang.html"
+                class="hidden md:inline text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 underline">Tentang</a>
+        </nav>
+    </header>
+
+    <!-- BACKDROP UNTUK MOBILE MENU -->
+    <div id="mobile-backdrop" onclick="toggleMobileMenu()"
+        class="fixed inset-0 bg-black/60 z-[40] hidden transition-opacity"></div>
+
+    <!-- SIDEBAR MOBILE MENU -->
+    <aside id="mobile-menu"
+        class="fixed inset-y-0 left-0 w-64 bg-[#00529C] p-6 flex flex-col gap-6 z-[50] transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl">
+        <div class="flex justify-between items-center border-b border-blue-800 pb-4">
+            <span class="text-[#FCD116] font-bold text-xl">Menu Navigasi</span>
+            <button onclick="toggleMobileMenu()" class="text-[#FCD116] hover:text-white">
+                <i class="ph-bold ph-x text-2xl"></i>
+            </button>
+        </div>
+        <div class="flex flex-col gap-4">
+            <a href="index.html" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-house"></i> Home</a>
+            <a href="peta.html" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-map-trifold"></i> WebGIS Peta</a>
+            <a href="daftar.html" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-clipboard-text"></i> Daftar</a>
+            <a href="tentang.html" class="text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-info"></i> Tentang</a>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT / TENTANG SECTION -->
+    <main class="flex-1 flex flex-col items-center justify-start px-6 md:px-20 py-12">
+        <div
+            class="w-full max-w-4xl flex flex-col items-center bg-white rounded-xl shadow-2xl p-8 md:p-12 z-10 relative mt-4 md:mt-10 overflow-hidden">
+            <!-- Background element -->
+            <div class="absolute top-0 right-0 w-64 h-64 bg-[#FCD116]/20 rounded-bl-full -z-10"></div>
+
+            <i class="ph-bold ph-info text-5xl text-[#E3242B] mb-4"></i>
+            <h1
+                class="text-[#00529C] text-4xl md:text-5xl font-bold tracking-wide mb-8 text-center border-b-4 border-[#FCD116] pb-2">
+                Tentang SiRuBi
+            </h1>
+
+            <!-- Bagian Tentang Kami -->
+            <div class="w-full flex flex-col items-center mb-16">
+                <h2
+                    class="text-[#00529C] text-3xl md:text-4xl font-bold tracking-wide mb-10 text-center border-b-4 border-[#FCD116] pb-2">
+                    Tentang Kami
+                </h2>
+
+                <!-- Bagian Foto Bareng (Fokus Wajah) -->
+                <div class="mb-14 w-full flex flex-col items-center">
+                    <div class="relative w-full max-w-4xl overflow-hidden rounded-2xl shadow-lg group">
+                        <img src="images/foto%20bareng.JPG" alt="Foto Bersama Tim SiRuBi"
+                            class="w-full aspect-[21/9] object-cover object-[center_55%] transition-transform duration-700 group-hover:scale-105">
+                        <div class="absolute inset-0 border-4 border-[#FCD116]/50 rounded-2xl pointer-events-none">
+                        </div>
+                    </div>
+                    <p class="mt-3 text-center text-gray-600 text-sm md:text-base italic px-4">
+                        Tim Pengembang SiRuBi
+                    </p>
+                </div>
+
+                <!-- Bagian Profil Anggota Tim -->
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 lg:gap-8 w-full px-2">
+                    <!-- Teara Clarissa -->
+                    <div class="flex flex-col items-center group cursor-pointer">
+                        <div
+                            class="w-full aspect-[4/5] overflow-hidden rounded-2xl shadow-md border-[3px] border-transparent group-hover:border-[#FCD116] transition-colors duration-300 relative bg-gray-100">
+                            <img src="Teara.JPG" alt="Teara"
+                                class="absolute inset-0 w-full h-full object-cover object-top transform scale-[1.5] origin-top transition-transform duration-500 group-hover:scale-[1.6]">
+                        </div>
+                        <span
+                            class="mt-4 block w-full font-bold text-[#00529C] text-xs md:text-sm group-hover:text-[#E3242B] transition-colors leading-tight text-center whitespace-nowrap overflow-hidden text-ellipsis">Teara Clarissa</span>
+                        <span class="text-gray-500 text-sm mt-1 font-medium">5016231124</span>
+                    </div>
+                    <!-- Muhammad Raihan -->
+                    <div class="flex flex-col items-center group cursor-pointer">
+                        <div
+                            class="w-full aspect-[4/5] overflow-hidden rounded-2xl shadow-md border-[3px] border-transparent group-hover:border-[#FCD116] transition-colors duration-300 relative bg-gray-100">
+                            <img src="images/Rey.JPG" alt="Rey"
+                                class="absolute inset-0 w-full h-full object-cover object-top transform scale-[1.5] origin-top transition-transform duration-500 group-hover:scale-[1.6]">
+                        </div>
+                        <span
+                            class="mt-4 block w-full font-bold text-[#00529C] text-xs md:text-sm group-hover:text-[#E3242B] transition-colors leading-tight text-center whitespace-nowrap overflow-hidden text-ellipsis">Muhammad Raihan</span>
+                        <span class="text-gray-500 text-sm mt-1 font-medium">5016231117</span>
+                    </div>
+                    <!-- Nariswari Nasywa -->
+                    <div class="flex flex-col items-center group cursor-pointer">
+                        <div
+                            class="w-full aspect-[4/5] overflow-hidden rounded-2xl shadow-md border-[3px] border-transparent group-hover:border-[#FCD116] transition-colors duration-300 relative bg-gray-100">
+                            <img src="images/Naris.JPG" alt="Naris"
+                                class="absolute inset-0 w-full h-full object-cover object-top transform scale-[1.5] origin-top transition-transform duration-500 group-hover:scale-[1.6]">
+                        </div>
+                        <span
+                            class="mt-4 block w-full font-bold text-[#00529C] text-xs md:text-sm group-hover:text-[#E3242B] transition-colors leading-tight text-center whitespace-nowrap overflow-hidden text-ellipsis">Nariswari Nasywa</span>
+                        <span class="text-gray-500 text-sm mt-1 font-medium">5016231108</span>
+                    </div>
+                    <!-- Muhammad Faiz -->
+                    <div class="flex flex-col items-center group cursor-pointer">
+                        <div
+                            class="w-full aspect-[4/5] overflow-hidden rounded-2xl shadow-md border-[3px] border-transparent group-hover:border-[#FCD116] transition-colors duration-300 relative bg-gray-100">
+                            <img src="images/Faiz.JPG" alt="Faiz"
+                                class="absolute inset-0 w-full h-full object-cover object-top transform scale-[1.5] origin-top transition-transform duration-500 group-hover:scale-[1.6]">
+                        </div>
+                        <span
+                            class="mt-4 block w-full font-bold text-[#00529C] text-xs md:text-sm group-hover:text-[#E3242B] transition-colors leading-tight text-center whitespace-nowrap overflow-hidden text-ellipsis">Muhammad Faiz</span>
+                        <span class="text-gray-500 text-sm mt-1 font-medium">5016231050</span>
+                    </div>
+                    <!-- Tsabhita Indhira -->
+                    <div class="flex flex-col items-center group cursor-pointer">
+                        <div
+                            class="w-full aspect-[4/5] overflow-hidden rounded-2xl shadow-md border-[3px] border-transparent group-hover:border-[#FCD116] transition-colors duration-300 relative bg-gray-100">
+                            <img src="images/Indhira.JPG" alt="Indhira"
+                                class="absolute inset-0 w-full h-full object-cover object-[center_20%] transform scale-[1.5] origin-[50%_20%] transition-transform duration-500 group-hover:scale-[1.6]">
+                        </div>
+                        <span
+                            class="mt-4 block w-full font-bold text-[#00529C] text-xs md:text-sm group-hover:text-[#E3242B] transition-colors leading-tight text-center whitespace-nowrap overflow-hidden text-ellipsis">Tsabhita Indhira</span>
+                        <span class="text-gray-500 text-sm mt-1 font-medium">5016231025</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-6 text-gray-700 text-lg leading-relaxed text-justify w-full">
+                <p>
+                    <strong class="text-[#E3242B] text-xl">SiRuBi</strong> (Sistem Informasi Rute dan Halte Bus Sekolah)
+                    adalah sebuah platform aplikasi pemetaan digital (WebGIS) komprehensif yang dirancang untuk
+                    memfasilitasi kebutuhan transportasi pelajar di bawah naungan Dinas Perhubungan Kota Surabaya.
+                </p>
+                <p>
+                    Aplikasi ini mendigitalkan dan menampilkan secara interaktif jaringan halte, lokasi sekolah yang
+                    dilewati, serta jalur lalu lintas bus sekolah secara aktual. Melalui integrasi peta canggih, siswa
+                    dan orang tua dapat dengan mudah merencanakan perjalanan mereka, menemukan halte terdekat, hingga
+                    melihat arah rute operasional bus sekolah yang ada.
+                </p>
+                <p>
+                    Misi utama dari pengembangan SiRuBi ini adalah untuk <span
+                        class="font-semibold text-[#00529C]">meningkatkan aksesibilitas, keamanan, serta minat pelajar
+                        Surabaya</span> dalam menggunakan fasilitas kendaraan umum khusus sekolah. Dengan demikian,
+                    diharapkan hal ini turut berperan dalam mengurangi angka kemacetan lalu lintas kota dan membantu
+                    menciptakan lingkungan yang lebih hijau.
+                </p>
+            </div>
+
+            <div
+                class="mt-12 pt-6 border-t border-gray-200 w-full flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-gray-500 font-medium">
+                <span>&copy; 2026 Pemerintah Kota Surabaya</span>
+                <span class="flex items-center gap-1">Dibuat dengan <i class="ph-fill ph-heart text-[#E3242B]"></i> di
+                    Surabaya</span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const backdrop = document.getElementById('mobile-backdrop');
+
+            menu.classList.toggle('-translate-x-full');
+            backdrop.classList.toggle('hidden');
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar | SiRubi Surabaya</title>
+
+    <!-- Menambahkan Favicon -->
+    <link rel="icon" type="image/png" href="logo.png">
+
+    <!-- Google Fonts: Kanit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col min-h-screen bg-[#00529C]">
+
+    <!-- HEADER -->
+    <header class="bg-[#FCD116] h-16 flex items-center justify-between px-4 md:px-6 shrink-0 z-50 shadow-md relative">
+        <div class="flex items-center gap-2 md:gap-4">
+            <button onclick="toggleMobileMenu()"
+                class="text-[#E3242B] p-1 rounded hover:bg-yellow-400 transition-colors focus:outline-none"
+                title="Buka Menu">
+                <i class="ph-bold ph-list text-2xl"></i>
+            </button>
+
+            <!-- Logo Kiri Atas -->
+            <img src="sirubi.png" alt="Logo SiRubi" class="h-8 md:h-10 object-contain"
+                onerror="this.src='https://via.placeholder.com/150x40/E3242B/FCD116?text=LOGO+ANDA'">
+            <div class="hidden lg:block h-8 md:h-10 border-l-2 border-[#E3242B]"></div>
+            <span class="text-[#E3242B] text-lg font-medium hidden lg:inline whitespace-nowrap">Sistem Informasi Rute dan Halte Bus
+                Sekolah Surabaya</span>
+        </div>
+
+        <nav class="flex gap-2 sm:gap-3 md:gap-6 items-center">
+            <a href="index.html"
+                class="text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 hover:underline">Home</a>
+            <a href="peta.html"
+                class="text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 hover:underline">WebGIS</a>
+            <a href="daftar.html"
+                class="hidden md:inline text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 underline">Daftar</a>
+        </nav>
+    </header>
+
+    <!-- BACKDROP UNTUK MOBILE MENU -->
+    <div id="mobile-backdrop" onclick="toggleMobileMenu()"
+        class="fixed inset-0 bg-black/60 z-[40] hidden transition-opacity"></div>
+
+    <!-- SIDEBAR MOBILE MENU -->
+    <aside id="mobile-menu"
+        class="fixed inset-y-0 left-0 w-64 bg-[#00529C] p-6 flex flex-col gap-6 z-[50] transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl">
+        <div class="flex justify-between items-center border-b border-blue-800 pb-4">
+            <span class="text-[#FCD116] font-bold text-xl">Menu Navigasi</span>
+            <button onclick="toggleMobileMenu()" class="text-[#FCD116] hover:text-white">
+                <i class="ph-bold ph-x text-2xl"></i>
+            </button>
+        </div>
+        <div class="flex flex-col gap-4">
+            <a href="index.html" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-house"></i> Home</a>
+            <a href="peta.html" class="text-white hover:text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-map-trifold"></i> WebGIS Peta</a>
+            <a href="daftar.html" class="text-[#FCD116] font-medium text-lg flex items-center gap-2"><i
+                    class="ph-bold ph-clipboard-text"></i> Daftar</a>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT / DAFTAR SECTION -->
+    <main class="flex-1 flex flex-col items-center justify-start px-6 md:px-20 py-12">
+        <div class="w-full max-w-2xl flex flex-col items-center bg-white rounded-xl shadow-2xl p-8 md:p-12 z-10 relative mt-4 md:mt-10 overflow-hidden text-center">
+            <!-- Background element -->
+            <div class="absolute top-0 left-0 w-48 h-48 bg-blue-100 rounded-br-full -z-10"></div>
+            
+            <i class="ph-bold ph-user-plus text-6xl text-[#00529C] mb-6"></i>
+            <h1 class="text-[#E3242B] text-3xl md:text-4xl font-bold tracking-wide mb-4">
+                Pendaftaran Bus Sekolah
+            </h1>
+
+            <p class="text-gray-600 text-lg md:text-xl leading-relaxed mb-8">
+                Pendaftaran pengguna Bus Sekolah Pemkot Surabaya dikelola langsung oleh portal resmi Dinas Perhubungan. Anda akan segera diarahkan ke halaman registrasi di web utama.<br><br>
+                Silakan klik tombol di bawah ini untuk melanjutkan pendaftaran Anda.
+            </p>
+
+            <!-- Redirect Link -->
+            <a href="https://bussekolah.surabaya.go.id/register" target="_blank" rel="noopener noreferrer"
+               class="bg-[#E3242B] text-[#FCD116] font-bold text-lg py-4 px-10 rounded-md shadow-lg border-b-4 border-r-2 border-red-800 hover:bg-[#c91820] hover:-translate-y-1 hover:border-b-4 hover:border-r-2 hover:shadow-xl transition-all active:translate-y-1 active:border-b-0 active:border-r-0 flex items-center justify-center gap-2">
+                <i class="ph-bold ph-paper-plane-tilt text-xl"></i>
+                Lanjut ke Form Pendaftaran
+            </a>
+
+            <div class="mt-12 w-full flex justify-center text-sm text-gray-400 font-medium pt-6 border-t border-gray-200">
+                <span>https://bussekolah.surabaya.go.id/register</span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const backdrop = document.getElementById('mobile-backdrop');
+
+            menu.classList.toggle('-translate-x-full');
+            backdrop.classList.toggle('hidden');
+        }
+    </script>
+</body>
+
+</html>
+

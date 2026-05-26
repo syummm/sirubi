@@ -1,0 +1,3765 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiRubi | Sistem Informasi Rute dan Halte Bus Sekolah Surabaya</title>
+
+    <!-- Menambahkan Favicon -->
+    <link rel="icon" type="image/png" href="logo.png">
+
+    <!-- Google Fonts: Kanit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        /* GPU-acceleration untuk container dan tile layer agar pan & zoom lebih smooth */
+        #map {
+            will-change: transform;
+        }
+
+        .leaflet-tile-container {
+            will-change: transform;
+        }
+
+        .leaflet-pane {
+            will-change: transform;
+        }
+
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .leaflet-popup-content {
+            margin: 0;
+            width: 280px !important;
+        }
+
+        .leaflet-popup-tip-container {
+            margin-top: -1px;
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: none;
+        }
+
+        /* Premium headers & text contrast */
+        .popup-header {
+            color: #1e293b;
+            font-weight: 600;
+            font-size: 15px;
+            padding: 14px 16px 10px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .popup-header i {
+            font-size: 20px;
+            color: #3b82f6;
+        }
+
+        .popup-header.halte-header i {
+            color: #ef4444;
+        }
+
+        .popup-header.sekolah-header i {
+            color: #f97316;
+        }
+
+        .popup-header.route-header i {
+            color: #3b82f6;
+        }
+
+        .popup-body {
+            padding: 12px 16px 16px 16px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #334155;
+        }
+
+        /* CSS Area Gambar Pop-up & Fallback Gradient */
+        .popup-image-container {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        .popup-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .popup-image:hover {
+            transform: scale(1.05);
+        }
+
+        .popup-image-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            gap: 6px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .popup-image-fallback.sekolah-fallback {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+        }
+
+        .popup-image-fallback.halte-fallback {
+            background: linear-gradient(135deg, #ef4444 0%, #b91c22 100%);
+        }
+
+        .popup-image-fallback i {
+            font-size: 32px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .popup-image-fallback span {
+            font-size: 11px;
+            font-weight: 600;
+            opacity: 0.95;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-4px);
+            }
+        }
+
+        /* CSS Rute Timeline Stepper */
+        .rute-timeline {
+            position: relative;
+            padding-left: 20px;
+            margin: 12px 0 8px 4px;
+            border-left: 2px solid #e2e8f0;
+            max-height: 150px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+
+        .rute-timeline::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .rute-timeline::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .rute-timeline::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: #475569;
+            line-height: 1.4;
+            padding-left: 4px;
+        }
+
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -27px;
+            top: 3px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3px solid #3b82f6;
+            box-shadow: 0 0 0 2px #ffffff;
+            z-index: 2;
+        }
+
+        .timeline-item.origin::before {
+            border-color: #22c55e;
+            background: #22c55e;
+        }
+
+        .timeline-item.destination::before {
+            border-color: #ef4444;
+            background: #ef4444;
+        }
+
+        .timeline-content {
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .custom-icon-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #00529C;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #FCD116;
+            border-radius: 4px;
+        }
+
+        .collapse-content {
+            transition: max-height 0.4s ease-out, padding 0.3s ease-out;
+            max-height: 900px;
+            overflow: hidden;
+        }
+
+        .collapse-content.closed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        .arrow-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .arrow-icon.closed {
+            transform: rotate(-90deg);
+        }
+
+        #search-results {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* Animasi Sorotan Rute */
+        .route-highlight {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: dash 2s linear forwards;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        /* Toggle button di dalam basemap box */
+        /* Container untuk panel kanan agar tertata otomatis */
+        #right-panels {
+            position: fixed;
+            bottom: 24px;
+            right: 12px;
+            z-index: 10050;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        /* Kotak Panel Peta (Untuk Legenda & Basemap) */
+        .map-panel {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 14px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+            width: 250px;
+            max-width: calc(100vw - 24px);
+            box-sizing: border-box;
+            font-family: Kanit, sans-serif;
+            color: #0f172a;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .map-panel .title {
+            font-weight: 600;
+            color: #00529C;
+            font-size: 15px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .map-panel .title i {
+            font-size: 18px;
+        }
+
+        .map-panel .toggle-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            color: #00529C;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+
+        /* State minimized: jadi kotak ikon saja */
+        .map-panel.minimized {
+            width: 50px;
+            height: 50px;
+            padding: 0;
+            cursor: pointer;
+            border-radius: 8px;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            background-clip: padding-box;
+        }
+
+        .map-panel.minimized:hover {
+            background: #f8fafc;
+        }
+
+        .map-panel.minimized .title {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+        }
+
+        .map-panel.minimized .title i {
+            font-size: 26px;
+            color: #333;
+        }
+
+        .map-panel.minimized .title span.title-text,
+        .map-panel.minimized .toggle-btn,
+        .map-panel.minimized .panel-content {
+            display: none;
+        }
+
+        .basemap-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        #basemap-box .legend-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            font-size: 14px;
+            margin: 6px 0;
+        }
+
+        /* Class untuk menutup sidebar secara eksplisit (desktop + mobile) */
+        /* Jangan pakai display:none supaya layout peta tidak bergeser; gunakan transform saja */
+        #sidebar.closed {
+            transform: translateX(-100%) !important;
+        }
+
+        /* Pada layar desktop, jadikan sidebar sebagai overlay fixed sehingga tidak mempengaruhi ukuran peta */
+        @media (min-width: 768px) {
+            #sidebar {
+                position: fixed;
+                top: 4rem;
+                /* sama dengan tinggi header (h-16) */
+                left: 0;
+                height: calc(100% - 4rem);
+                z-index: 60;
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+                will-change: transform;
+            }
+
+            /* Pastikan transform translate bekerja tanpa memengaruhi layout */
+            #sidebar.closed {
+                transform: translateX(-100%);
+            }
+        }
+
+        #basemap-box .legend-swatch {
+            width: 28px;
+            height: 12px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        /* Buat sudut kotak menu di sidebar lebih melengkung (tidak siku-siku) */
+        #sidebar .rounded-sm {
+            border-radius: 8px !important;
+            overflow: hidden;
+        }
+
+        /* Sedikit membulatkan tombol di dalam panel agar konsisten */
+        #sidebar button,
+        #sidebar .basemap-buttons button {
+            border-radius: 6px !important;
+        }
+
+        /* Ubah kolom pencarian menjadi putih tanpa mengubah fungsi */
+        #sidebar #search-input {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border-color: #e5e7eb !important;
+        }
+
+        #sidebar #search-input::placeholder {
+            color: #9ca3af !important;
+            opacity: 1 !important;
+        }
+
+        /* Icon pencarian di dalam input */
+        #sidebar .ph.ph-magnifying-glass.absolute {
+            color: #E3242B !important;
+        }
+
+        /* Hasil pencarian: sederhana, putih, dengan scrollbar track putih dan thumb abu-abu */
+        #search-results {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 8px !important;
+            box-shadow: 0 8px 24px rgba(2, 6, 23, 0.08) !important;
+            padding: 4px 0 !important;
+            max-height: 260px !important;
+            overflow-y: auto !important;
+        }
+
+        /* Minimal list row */
+        #search-results li {
+            padding: 10px 12px !important;
+            margin: 0 !important;
+            list-style: none !important;
+            color: #0f172a !important;
+            border-bottom: 1px solid #f3f4f6 !important;
+            cursor: pointer !important;
+            background: transparent !important;
+            font-size: 14px !important;
+        }
+
+        #search-results li:last-child {
+            border-bottom: 0 !important;
+        }
+
+        #search-results li:hover {
+            background: #f8fafc !important;
+        }
+
+        /* Tombol rute: default putih, aktif merah */
+        .route-btn {
+            background: #ffffff;
+            color: #0f172a;
+            border: 1px solid #e5e7eb;
+            padding-top: 0.375rem;
+            padding-bottom: 0.375rem;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        /* State aktif: warna rute diterapkan lewat inline style JS, class ini hanya untuk penanda */
+        .route-btn-active {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+            transform: translateY(-2px);
+        }
+
+        /* Tombol arah (Berangkat / Pulang): default putih, aktif merah */
+        .direction-btn {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #e5e7eb !important;
+            padding-top: 0.375rem !important;
+            padding-bottom: 0.375rem !important;
+        }
+
+        .direction-btn.active {
+            background: #E3242B !important;
+            color: #FCD116 !important;
+            border-color: #d90429 !important;
+        }
+
+        .direction-btn {
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+        }
+
+        .direction-btn.active {
+            transform: translateY(-4px) !important;
+            box-shadow: 0 10px 18px rgba(0, 0, 0, 0.12) !important;
+            border-bottom-width: 4px !important;
+        }
+
+        /* Scrollbar: white track, gray thumb */
+        #search-results::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        #search-results::-webkit-scrollbar-track {
+            background: #ffffff;
+            border-radius: 8px;
+        }
+
+        #search-results::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 8px;
+            border: 2px solid #ffffff;
+        }
+
+        #search-results {
+            scrollbar-color: #9ca3af #ffffff;
+            scrollbar-width: thin;
+        }
+
+        /* Memisahkan garis yang tumpang tindih secara visual tanpa merusak geometri */
+        .garis-barat {
+            transform: translate(-4px, -4px);
+        }
+
+        .garis-greges {
+            transform: translate(-2px, -2px);
+        }
+
+        .garis-selatan {
+            transform: translate(0px, 0px);
+        }
+
+        .garis-timur {
+            transform: translate(2px, 2px);
+        }
+
+        .garis-utara {
+            transform: translate(4px, 4px);
+        }
+
+        /* Marker Pin Custom - Modernized with gradients, micro-animations, and glow */
+        .custom-pin-halte {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #ef4444 0%, #b91c22 100%);
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 10px rgba(185, 28, 34, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .custom-pin-halte i {
+            transform: rotate(45deg);
+            color: white;
+            font-size: 18px;
+            filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+        }
+
+        .custom-pin-sekolah {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #f97316 0%, #c2410c 100%);
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 10px rgba(194, 65, 12, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .custom-pin-sekolah i {
+            transform: rotate(45deg);
+            color: white;
+            font-size: 18px;
+            filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+        }
+
+        /* Hover animation triggers scale and soft translate shadow */
+        .custom-icon-wrapper {
+            transition: transform 0.25s ease;
+        }
+
+        .custom-icon-wrapper:hover .custom-pin-halte {
+            transform: scale(1.15) rotate(-45deg) translateY(-2px);
+            box-shadow: 0 10px 15px rgba(185, 28, 34, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+        }
+
+        .custom-icon-wrapper:hover .custom-pin-sekolah {
+            transform: scale(1.15) rotate(-45deg) translateY(-2px);
+            box-shadow: 0 10px 15px rgba(194, 65, 12, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+        }
+
+        /* Custom Tooltip Labels for Zoomed In Markers */
+        .leaflet-tooltip.marker-label {
+            background: rgba(15, 23, 42, 0.95);
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+            white-space: nowrap;
+            font-family: 'Kanit', sans-serif;
+            pointer-events: none;
+            /* Let clicks pass through to the marker */
+        }
+
+        .leaflet-tooltip-top.marker-label::before {
+            border-top-color: rgba(15, 23, 42, 0.95) !important;
+        }
+
+        .leaflet-tooltip-bottom.marker-label::before {
+            border-bottom-color: rgba(15, 23, 42, 0.95) !important;
+        }
+
+        .leaflet-tooltip.sekolah-label {
+            background: linear-gradient(135deg, #f97316 0%, #c2410c 100%) !important;
+            border-color: rgba(255, 255, 255, 0.35) !important;
+        }
+
+        .leaflet-tooltip-top.sekolah-label::before {
+            border-top-color: #c2410c !important;
+        }
+
+        .leaflet-tooltip-bottom.sekolah-label::before {
+            border-bottom-color: #c2410c !important;
+        }
+
+        .leaflet-tooltip.halte-label {
+            background: linear-gradient(135deg, #ef4444 0%, #b91c22 100%) !important;
+            border-color: rgba(255, 255, 255, 0.35) !important;
+        }
+
+        .leaflet-tooltip-top.halte-label::before {
+            border-top-color: #b91c22 !important;
+        }
+
+        .leaflet-tooltip-bottom.halte-label::before {
+            border-bottom-color: #b91c22 !important;
+        }
+
+        .desa-label-tooltip {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-weight: 700;
+            font-size: 10px;
+            color: #1e293b;
+            text-transform: uppercase;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.9), -1px -1px 2px rgba(255, 255, 255, 0.9), 1px -1px 2px rgba(255, 255, 255, 0.9), -1px 1px 2px rgba(255, 255, 255, 0.9);
+        }
+
+
+        /* ===== Ikon Halte Baru (Biru) ===== */
+        .custom-pin-halte-baru {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 10px rgba(3, 105, 161, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .custom-pin-halte-baru i {
+            transform: rotate(45deg);
+            color: white;
+            font-size: 18px;
+            filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
+        }
+
+        .custom-icon-wrapper:hover .custom-pin-halte-baru {
+            transform: scale(1.15) rotate(-45deg) translateY(-2px);
+            box-shadow: 0 10px 18px rgba(3, 105, 161, 0.55), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+        }
+
+        .halte-baru-label {
+            margin-top: 4px;
+            background: linear-gradient(135deg, #0369a1, #0ea5e9);
+            color: #ffffff;
+            font-family: 'Kanit', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            white-space: nowrap;
+            border: 1.5px solid #7dd3fc;
+            letter-spacing: 0.3px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+        }
+
+        /* ===== Animasi Pop-in Halte Baru ===== */
+        @keyframes halte-pop-in {
+            0% {
+                transform: scale(0) translateY(40px);
+                opacity: 0;
+                filter: blur(2px);
+            }
+
+            50% {
+                transform: scale(1.15) translateY(-5px);
+                opacity: 1;
+                filter: blur(0px);
+            }
+
+            100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .animate-halte-pop {
+            opacity: 0;
+            animation: halte-pop-in 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* ===== Tombol Animasi Rekomendasi Halte ===== */
+        @keyframes rek-pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 0 8px rgba(56, 189, 248, 0);
+            }
+        }
+
+        .btn-rek-halte {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Kanit', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(3, 105, 161, 0.4);
+            transition: all 0.25s ease;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-rek-halte:hover {
+            background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 5px 14px rgba(3, 105, 161, 0.5);
+        }
+
+        .btn-rek-halte.active {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            box-shadow: 0 3px 10px rgba(185, 28, 28, 0.4);
+            animation: none;
+        }
+
+        .btn-rek-halte.loading {
+            animation: rek-pulse 1.2s infinite;
+            pointer-events: none;
+            opacity: 0.85;
+        }
+
+        /* ===== Label langkah animasi ===== */
+        #rek-step-label {
+            display: none;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: #0369a1;
+            margin-top: 4px;
+            letter-spacing: 0.3px;
+            transition: opacity 0.3s;
+        }
+    </style>
+    <script>
+        if (window.location.search.includes('embed=true')) {
+            document.documentElement.classList.add('embed-mode');
+        }
+    </script>
+    <style>
+        html.embed-mode header,
+        html.embed-mode aside#sidebar,
+        html.embed-mode #desktop-toggle-sidebar {
+            display: none !important;
+        }
+        html.embed-mode #main-content {
+            height: 100vh !important;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col h-screen bg-[#00529C]">
+
+    <!-- CUSTOM TOAST MESSAGE (Pesan Notifikasi) -->
+    <div id="toast-msg"
+        class="absolute top-20 left-1/2 -translate-x-1/2 z-[9999] bg-red-700 text-white px-6 py-2 rounded shadow-lg border border-red-500 font-medium transition-opacity duration-300 opacity-0 pointer-events-none">
+        Pesan
+    </div>
+
+    <!-- HEADER -->
+    <header class="bg-[#FCD116] h-16 flex items-center justify-between px-4 md:px-4 shrink-0 z-50 shadow-md relative">
+        <div class="flex items-center gap-2 md:gap-4">
+            <!-- Hamburger Menu Button -->
+            <button onclick="toggleMobileMenu()"
+                class="md:hidden text-[#E3242B] p-1 rounded hover:bg-yellow-400 transition-colors focus:outline-none"
+                title="Buka Menu">
+                <i class="ph-bold ph-list text-2xl"></i>
+            </button>
+
+            <!-- Desktop: Tombol Hamburger untuk membuka/tutup sidebar -->
+            <button id="desktop-toggle-sidebar" onclick="toggleSidebar()"
+                class="hidden md:flex text-[#E3242B] p-1 rounded hover:bg-yellow-400 transition-colors items-center justify-center"
+                title="Tutup / Buka Panel">
+                <i class="ph-bold ph-list text-2xl"></i>
+            </button>
+
+            <!-- Logo -->
+            <img src="f8b7cf15-aecb-4655-ade8-e1426c99e62e.png" alt="Logo SiRubi"
+                class="h-8 md:h-10 object-contain bg-transparent"
+                onerror="this.src='https://via.placeholder.com/150x40/E3242B/FCD116?text=LOGO+ANDA'">
+            <div class="hidden lg:block h-8 md:h-10 border-l-2 border-[#E3242B]"></div>
+            <span class="text-[#E3242B] text-lg font-medium hidden lg:inline whitespace-nowrap">Sistem Informasi Rute
+                dan Halte Bus
+                Sekolah
+                Surabaya</span>
+        </div>
+
+
+        <nav class="flex items-center gap-2 sm:gap-3 md:gap-6 shrink-0">
+            <input id="search-input-top" type="text" placeholder="Cari.."
+                class="hidden h-8 w-24 sm:w-44 px-2 rounded-md border border-gray-200 bg-white text-sm focus:outline-none" />
+            <a href="index.html"
+                class="text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 hover:underline">Home</a>
+            <a href="peta.html"
+                class="text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 underline">WebGIS</a>
+            <a href="daftar.html"
+                class="hidden md:inline text-[#E3242B] hover:text-[#b91c22] font-medium text-lg decoration-2 underline-offset-4 hover:underline">Daftar</a>
+        </nav>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex flex-1 overflow-hidden relative">
+
+        <!-- BACKDROP UNTUK MOBILE MENU -->
+        <div id="mobile-backdrop" onclick="toggleMobileMenu()"
+            class="absolute inset-0 bg-black/60 z-[40] hidden md:hidden transition-opacity"></div>
+
+        <!-- SIDEBAR -->
+        <aside id="sidebar"
+            class="w-80 max-w-[85vw] bg-[#00529C] p-4 flex flex-col gap-4 overflow-y-auto z-[50] absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl">
+
+            <!-- Tombol Tutup (Hanya di Mobile) -->
+            <div class="md:hidden flex justify-end pb-2 -mb-2 border-b border-blue-800">
+                <button onclick="toggleMobileMenu()" class="text-[#FCD116] hover:text-white flex items-center gap-1">
+                    <span class="text-sm font-medium">Tutup Panel</span>
+                    <i class="ph-bold ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Tombol Tutup / Buka untuk Desktop -->
+            <div class="hidden md:flex justify-end pb-2 -mb-2 border-b border-blue-800">
+                <button onclick="toggleSidebar()" class="text-[#FCD116] hover:text-white flex items-center gap-1">
+                    <span class="text-sm font-medium">Tutup Panel</span>
+                    <i class="ph-bold ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <!-- PANEL 2: Pencarian (Halte & Sekolah) -->
+            <div class="bg-[#FCD116] rounded-sm shadow border-2 border-yellow-500 p-2 relative shrink-0">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="ph-bold ph-magnifying-glass text-[#E3242B] text-[18px]"></i>
+                    <span class="font-semibold text-[#E3242B]">Pencarian</span>
+                </div>
+                <div class="relative">
+                    <input type="text" id="search-input" placeholder="Cari Halte / Sekolah.."
+                        class="w-full bg-[#E3242B] text-[#FCD116] placeholder-[#FCD116]/70 py-1.5 px-3 rounded-sm border-2 border-orange-600 focus:outline-none focus:ring-2 focus:ring-yellow-300">
+                    <i class="ph ph-magnifying-glass absolute right-2 top-1/2 -translate-y-1/2 text-[#FCD116]"></i>
+
+                    <ul id="search-results"
+                        class="absolute z-50 w-full bg-[#E3242B] mt-1 rounded shadow-lg border-2 border-orange-600 hidden">
+                        <!-- List diisi oleh JS -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- PANEL 1: Rute Eksisting -->
+            <div class="bg-[#FCD116] rounded-sm shadow border-2 border-yellow-500 overflow-hidden shrink-0">
+                <button onclick="toggleCollapse('menu-rute-content', 'arrow-rute')"
+                    class="w-full flex items-center gap-2 bg-[#FCD116] p-2 pb-1 border-b border-yellow-600 hover:bg-yellow-400 transition-colors">
+                    <i class="ph-bold ph-path text-[#E3242B] text-[18px]"></i>
+                    <span class="font-semibold text-[#E3242B] flex-1 text-left">Rute Eksisting</span>
+                    <i id="arrow-rute" class="ph-bold ph-caret-down text-[#E3242B] arrow-icon"></i>
+                </button>
+                <div id="menu-rute-content" class="collapse-content bg-[#FCD116] p-3 pt-0 flex flex-col gap-2">
+
+
+                    <!-- Arah Rute (Panel Terpisah Tapi Di Dalam Menu Rute Agar Dekat) -->
+                    <div class="mt-2 px-1">
+                        <div class="text-sm text-[#E3242B] font-semibold mb-1">Arah Rute</div>
+                        <div class="flex gap-2">
+                            <button id="btn-arah-berangkat" onclick="setDirection(0)"
+                                class="direction-btn flex-1 py-1 rounded-sm border-2 font-medium">Berangkat</button>
+                            <button id="btn-arah-pulang" onclick="setDirection(1)"
+                                class="direction-btn flex-1 py-1 rounded-sm border-2 font-medium">Pulang</button>
+                        </div>
+                    </div>
+
+                    <!-- Tombol untuk tiap rute khusus -->
+                    <button id="btn-rute-selatan" onclick="toggleLayer('ruteSelatan', this)" data-route-color="#2a9d8f"
+                        class="route-btn font-medium py-1 px-4 rounded-sm border-2 flex items-center justify-center gap-2 transition-all">
+                        Rute Selatan
+                    </button>
+                    <button id="btn-rute-timur" onclick="toggleLayer('ruteTimur', this)" data-route-color="#ff8c42"
+                        class="route-btn font-medium py-1 px-4 rounded-sm border-2 flex items-center justify-center gap-2 transition-all">
+                        Rute Timur
+                    </button>
+                    <button id="btn-rute-barat" onclick="toggleLayer('ruteBarat', this)" data-route-color="#d90429"
+                        class="route-btn font-medium py-1 px-4 rounded-sm border-2 flex items-center justify-center gap-2 transition-all">
+                        Rute Barat
+                    </button>
+                    <button id="btn-rute-utara" onclick="toggleLayer('ruteUtara', this)" data-route-color="#7f00ff"
+                        class="route-btn font-medium py-1 px-4 rounded-sm border-2 flex items-center justify-center gap-2 transition-all">
+                        Rute Romokalisari
+                    </button>
+                    <button id="btn-rute-greges" onclick="toggleLayer('ruteGreges', this)" data-route-color="#4361ee"
+                        class="route-btn font-medium py-1 px-4 rounded-sm border-2 flex items-center justify-center gap-2 transition-all">
+                        Rute Greges
+                    </button>
+                    <button id="btn-rute-utara-asli" onclick="toggleLayer('ruteUtaraAsli', this)"
+                        data-route-color="#00bcd4"
+                        class="route-btn font-medium py-1 px-4 rounded-sm border-2 flex items-center justify-center gap-2 transition-all">
+                        Rute Utara
+                    </button>
+                </div>
+            </div>
+
+            <!-- PANEL JADWAL: Jadwal Bus Sekolah -->
+            <div class="bg-[#FCD116] rounded-sm shadow border-2 border-yellow-500 overflow-hidden shrink-0">
+                <button onclick="toggleCollapse('menu-jadwal-sidebar-content', 'arrow-jadwal-sidebar')"
+                    class="w-full flex items-center gap-2 bg-[#FCD116] p-2 pb-1 border-b border-yellow-600 hover:bg-yellow-400 transition-colors">
+                    <i class="ph-bold ph-calendar text-[#E3242B] text-[18px]"></i>
+                    <span class="font-semibold text-[#E3242B] flex-1 text-left">Jadwal</span>
+                    <i id="arrow-jadwal-sidebar" class="ph-bold ph-caret-down text-[#E3242B] arrow-icon closed"></i>
+                </button>
+                <div id="menu-jadwal-sidebar-content" class="collapse-content bg-[#FCD116] p-2 pt-3 closed">
+                    <div class="flex flex-col gap-3">
+                        <!-- Card Berangkat -->
+                        <div class="bg-white rounded-md border border-red-200 overflow-hidden shadow-sm relative">
+                            <div class="bg-[#E3242B] text-[#FCD116] font-bold py-1.5 px-3 flex items-center gap-2">
+                                <i class="ph-bold ph-student text-lg"></i>
+                                <span class="tracking-wide text-sm">BERANGKAT</span>
+                            </div>
+                            <div class="p-2.5 flex flex-col gap-2 relative z-10">
+                                <!-- Grid Hari -->
+                                <div class="grid grid-cols-1 gap-2">
+                                    <div class="flex flex-col justify-center bg-red-50/50 p-2 rounded-md border border-red-100 transition-colors hover:bg-red-50">
+                                        <div class="flex items-center gap-1.5 mb-1.5">
+                                            <i class="ph-fill ph-calendar-check text-red-500 text-sm"></i>
+                                            <span class="text-[10px] font-bold text-red-500 uppercase tracking-wider leading-none">Senin - Jumat</span>
+                                        </div>
+                                        <div class="text-[13px] font-bold text-gray-800 flex items-center gap-1 leading-none">
+                                            <i class="ph-bold ph-clock text-red-600 text-[15px]"></i> 05:30 WIB
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2.5 bg-red-50/50 p-2 rounded-md border border-red-100 transition-colors hover:bg-red-50">
+                                    <div class="bg-white text-red-600 rounded-full shrink-0 flex items-center justify-center w-8 h-8 shadow-sm border border-red-100">
+                                        <i class="ph-bold ph-map-pin-line text-lg"></i>
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="text-[10px] font-bold text-red-500 uppercase tracking-wider leading-none mb-1">Halte Utama</span>
+                                        <span class="text-[13px] font-semibold text-gray-800 leading-none">Titik Awal Rute Berangkat/Pulang</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    
+                        <!-- Card Pulang -->
+                        <div class="bg-white rounded-md border border-orange-200 overflow-hidden shadow-sm relative">
+                            <div class="bg-orange-600 text-white font-bold py-1.5 px-3 flex items-center gap-2">
+                                <i class="ph-bold ph-house-line text-lg"></i>
+                                <span class="tracking-wide text-sm">PULANG</span>
+                            </div>
+                            <div class="p-2.5 flex flex-col gap-2 relative z-10">
+                                <!-- Grid Hari -->
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="flex flex-col justify-center bg-orange-50/50 p-2 rounded-md border border-orange-100 transition-colors hover:bg-orange-50">
+                                        <div class="flex items-center gap-1.5 mb-1.5">
+                                            <i class="ph-fill ph-calendar-check text-orange-500 text-sm"></i>
+                                            <span class="text-[10px] font-bold text-orange-500 uppercase tracking-wider leading-none">Senin - Kamis</span>
+                                        </div>
+                                        <div class="text-[13px] font-bold text-gray-800 flex items-center gap-1 leading-none">
+                                            <i class="ph-bold ph-clock text-orange-600 text-[15px]"></i> 16:00 WIB
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col justify-center bg-orange-50/50 p-2 rounded-md border border-orange-100 transition-colors hover:bg-orange-50">
+                                        <div class="flex items-center gap-1.5 mb-1.5">
+                                            <i class="ph-fill ph-calendar-check text-orange-500 text-sm"></i>
+                                            <span class="text-[10px] font-bold text-orange-500 uppercase tracking-wider leading-none">Jumat</span>
+                                        </div>
+                                        <div class="text-[13px] font-bold text-gray-800 flex items-center gap-1 leading-none">
+                                            <i class="ph-bold ph-clock text-orange-600 text-[15px]"></i> 13:00 WIB
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2.5 bg-orange-50/50 p-2 rounded-md border border-orange-100 transition-colors hover:bg-orange-50">
+                                    <div class="bg-white text-orange-600 rounded-full shrink-0 flex items-center justify-center w-8 h-8 shadow-sm border border-orange-100">
+                                        <i class="ph-bold ph-map-pin-line text-lg"></i>
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="text-[10px] font-bold text-orange-500 uppercase tracking-wider leading-none mb-1">Halte Utama</span>
+                                        <span class="text-[13px] font-semibold text-gray-800 leading-none">Titik Awal Rute Berangkat/Pulang</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL 2.5: Filter Kategori Sekolah -->
+            <div class="bg-[#FCD116] rounded-sm shadow border-2 border-yellow-500 overflow-hidden shrink-0">
+                <button onclick="toggleCollapse('menu-filter-sekolah-content', 'arrow-filter-sekolah')"
+                    class="w-full flex items-center gap-2 bg-[#FCD116] p-2 pb-1 border-b border-yellow-600 hover:bg-yellow-400 transition-colors">
+                    <i class="ph-bold ph-funnel text-[#E3242B] text-[18px]"></i>
+                    <span class="font-semibold text-[#E3242B] flex-1 text-left">Filter Kategori Sekolah</span>
+                    <i id="arrow-filter-sekolah" class="ph-bold ph-caret-down text-[#E3242B] arrow-icon closed"></i>
+                </button>
+                <div id="menu-filter-sekolah-content"
+                    class="collapse-content bg-[#FCD116] p-2 pt-1 flex flex-col gap-1 pl-1 text-sm text-[#E3242B] font-medium closed">
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-yellow-400 p-1 rounded">
+                        <input type="checkbox" value="TK" class="school-filter accent-red-600 w-4 h-4 cursor-pointer"
+                            checked> Tingkat TK / Sederajat
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-yellow-400 p-1 rounded">
+                        <input type="checkbox" value="SD" class="school-filter accent-red-600 w-4 h-4 cursor-pointer"
+                            checked> Tingkat SD / Sederajat
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-yellow-400 p-1 rounded">
+                        <input type="checkbox" value="SMP" class="school-filter accent-red-600 w-4 h-4 cursor-pointer"
+                            checked> Tingkat SMP / Sederajat
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-yellow-400 p-1 rounded">
+                        <input type="checkbox" value="SMA" class="school-filter accent-red-600 w-4 h-4 cursor-pointer"
+                            checked> Tingkat SMA / Sederajat
+                    </label>
+                </div>
+            </div>
+
+            <!-- PANEL 5: Rekomendasi Halte // Rute Timur -->
+            <div class="bg-[#FCD116] rounded-sm shadow border-2 border-yellow-500 overflow-hidden shrink-0">
+                <button onclick="toggleCollapse('menu-rekomendasi-timur-content', 'arrow-rekomendasi-timur')"
+                    class="w-full flex items-center gap-2 bg-[#FCD116] p-2 pb-1 border-b border-yellow-600 hover:bg-yellow-400 transition-colors">
+                    <i class="ph-bold ph-map-pin-plus text-[#E3242B] text-[18px]"></i>
+                    <span class="font-semibold text-[#E3242B] flex-1 text-left">Rekomendasi Titik Halte</span>
+                    <i id="arrow-rekomendasi-timur" class="ph-bold ph-caret-down text-[#E3242B] arrow-icon closed"></i>
+                </button>
+                <div id="menu-rekomendasi-timur-content" class="collapse-content bg-[#FCD116] p-3 flex flex-col gap-3 closed">
+                    <div class="-mt-1 -mb-1 ml-[18px]">
+                        <span
+                            style="display:inline-block; background:linear-gradient(135deg, #ff8c42 0%, #e06c20 100%); color:#ffffff; font-size:13px; font-weight:700; padding:5px 12px; border-radius:999px; letter-spacing:0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Rute
+                            Timur</span>
+                    </div>
+
+                    <!-- Subjudul: Rekomendasi Halte (gabungan Density + Diversity + Design) -->
+                    <div
+                        style="background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); border-radius: 10px; border: 2px solid #FCD116; box-shadow: 0 4px 14px rgba(185,28,28,0.35); padding: 10px;">
+                        <!-- Header -->
+                        <div
+                            style="display:flex; align-items:center; gap:8px; margin-bottom:8px; padding-bottom:8px; border-bottom: 1px solid rgba(252,209,22,0.4);">
+                            <i class="ph-fill ph-star" style="color:#FCD116; font-size:16px;"></i>
+                            <span
+                                style="font-weight:700; color:#FCD116; font-size:14px; letter-spacing:0.3px;">Rekomendasi
+                                Halte</span>
+                            <i id="rek-halte-toggle-icon" class="ph-bold ph-eye-slash"
+                                onclick="toggleHalteRekAnimated()" title="Tampilkan/Sembunyikan Rekomendasi Halte"
+                                style="margin-left:auto; cursor:pointer; color:#FCD116; font-size:18px; transition:color 0.2s;"
+                                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#FCD116'"></i>
+                        </div>
+                        <!-- Deskripsi -->
+                        <p style="font-size:11px; color:rgba(255,255,255,0.85); margin:0 0 8px 0; line-height:1.5;">
+                            Skor akhir gabungan dari tiga kriteria AHP:
+                        </p>
+                        <!-- Badge 3 kriteria -->
+                        <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px;">
+                            <span
+                                style="background:rgba(252,209,22,0.15); border:1px solid rgba(252,209,22,0.5); border-radius:20px; padding:2px 8px; font-size:11px; color:#FCD116; font-weight:600; display:flex; align-items:center; gap:4px;">
+                                <i class="ph-fill ph-circles-three" style="font-size:11px;"></i> Density
+                            </span>
+                            <span
+                                style="background:rgba(252,209,22,0.15); border:1px solid rgba(252,209,22,0.5); border-radius:20px; padding:2px 8px; font-size:11px; color:#FCD116; font-weight:600; display:flex; align-items:center; gap:4px;">
+                                <i class="ph-fill ph-tree-structure" style="font-size:11px;"></i> Diversity
+                            </span>
+                            <span
+                                style="background:rgba(252,209,22,0.15); border:1px solid rgba(252,209,22,0.5); border-radius:20px; padding:2px 8px; font-size:11px; color:#FCD116; font-weight:600; display:flex; align-items:center; gap:4px;">
+                                <i class="ph-fill ph-pencil-ruler" style="font-size:11px;"></i> Design
+                            </span>
+                        </div>
+                        <!-- Item baris 2: tombol animasi rekomendasi halte -->
+                        <div style="border-top:1px solid rgba(252,209,22,0.3); padding-top:8px;">
+                            <button id="btn-rek-halte" class="btn-rek-halte" onclick="toggleHalteRekAnimated()">
+                                <i class="ph-bold ph-bus-simple" style="font-size:14px;"></i>
+                                <span id="btn-rek-halte-text">Tampilkan Rekomendasi Halte</span>
+                            </button>
+                            <div id="rek-step-label">⏳ Memuat...</div>
+                        </div>
+                    </div>
+
+                    <!-- Subjudul: Density -->
+                    <div class="bg-white/60 rounded-md p-2 border border-yellow-400">
+                        <div class="flex items-center gap-2 mb-2 pb-1 border-b border-yellow-400">
+                            <i class="ph-fill ph-circles-three text-[#E3242B] text-sm"></i>
+                            <span class="font-semibold text-[#E3242B] text-sm">Density</span>
+                            <i id="density-toggle-icon"
+                                class="ph-bold ph-eye-slash ml-auto cursor-pointer text-[#E3242B] hover:text-red-700 text-lg transition-colors"
+                                onclick="toggleDensityLayer()" title="Tampilkan/Sembunyikan Density.json"></i>
+                        </div>
+                        <ul class="flex flex-col gap-1">
+                            <li class="flex items-center gap-2 text-[13px] text-[#E3242B] font-medium">
+                                <i class="ph-fill ph-users text-[#E3242B] text-[13px] shrink-0"></i>
+                                Kepadatan Penduduk
+                            </li>
+                            <li class="flex items-center gap-2 text-[13px] text-[#E3242B] font-medium">
+                                <i class="ph-fill ph-buildings text-[#E3242B] text-[13px] shrink-0"></i>
+                                Kepadatan Bangunan
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Subjudul: Diversity -->
+                    <div class="bg-white/60 rounded-md p-2 border border-yellow-400">
+                        <div class="flex items-center gap-2 mb-2 pb-1 border-b border-yellow-400">
+                            <i class="ph-fill ph-tree-structure text-[#E3242B] text-sm"></i>
+                            <span class="font-semibold text-[#E3242B] text-sm">Diversity</span>
+                            <i id="diversity-toggle-icon"
+                                class="ph-bold ph-eye-slash ml-auto cursor-pointer text-[#E3242B] hover:text-red-700 text-lg transition-colors"
+                                onclick="toggleDiversityLayer()" title="Tampilkan/Sembunyikan Diversity.geojson"></i>
+                        </div>
+                        <ul class="flex flex-col gap-1">
+                            <li class="flex items-center gap-2 text-[13px] text-[#E3242B] font-medium">
+                                <i class="ph-fill ph-student text-[#E3242B] text-[13px] shrink-0"></i>
+                                Bangkitan Pelajar
+                            </li>
+                            <li class="flex items-center gap-2 text-[13px] text-[#E3242B] font-medium">
+                                <i class="ph-fill ph-map-trifold text-[#E3242B] text-[13px] shrink-0"></i>
+                                RDTR
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Subjudul: Design -->
+                    <div class="bg-white/60 rounded-md p-2 border border-yellow-400">
+                        <div class="flex items-center gap-2 mb-2 pb-1 border-b border-yellow-400">
+                            <i class="ph-fill ph-pencil-ruler text-[#E3242B] text-sm"></i>
+                            <span class="font-semibold text-[#E3242B] text-sm">Design</span>
+                            <i id="design-toggle-icon"
+                                class="ph-bold ph-eye-slash ml-auto cursor-pointer text-[#E3242B] hover:text-red-700 text-lg transition-colors"
+                                onclick="toggleDesignLayer()" title="Tampilkan/Sembunyikan Design.geojson"></i>
+                        </div>
+                        <ul class="flex flex-col gap-1">
+                            <li class="flex items-center gap-2 text-[13px] text-[#E3242B] font-medium">
+                                <i class="ph-fill ph-person-simple-walk text-[#E3242B] text-[13px] shrink-0"></i>
+                                Titik Penyebrangan
+                            </li>
+                            <li class="flex items-center gap-2 text-[13px] text-[#E3242B] font-medium">
+                                <i class="ph-fill ph-road-horizon text-[#E3242B] text-[13px] shrink-0"></i>
+                                Jaringan Jalan
+                            </li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- PANEL 4: Basemap Toggle -->
+            <div class="bg-[#FCD116] rounded-sm shadow border-2 border-yellow-500 overflow-hidden shrink-0">
+                <button onclick="toggleCollapse('menu-basemap-sidebar-content', 'arrow-basemap-sidebar')"
+                    class="w-full flex items-center gap-2 bg-[#FCD116] p-2 pb-1 border-b border-yellow-600 hover:bg-yellow-400 transition-colors">
+                    <i class="ph-bold ph-stack text-[#E3242B] text-[18px]"></i>
+                    <span class="font-semibold text-[#E3242B] flex-1 text-left">Basemap</span>
+                    <i id="arrow-basemap-sidebar" class="ph-bold ph-caret-down text-[#E3242B] arrow-icon closed"></i>
+                </button>
+                <div id="menu-basemap-sidebar-content"
+                    class="collapse-content bg-[#FCD116] p-2 pt-3 flex gap-1 flex-wrap closed">
+                    <button id="btn-basemap-default" onclick="setBasemap('default')"
+                        class="flex-1 min-w-[70px] bg-[#FCD116] text-[#E3242B] font-semibold py-1.5 px-2 rounded-sm border-b-4 border-r-2 border-yellow-600 transition-all flex items-center justify-center gap-1 active-basemap transform -translate-y-1">
+                        <i class="ph-fill ph-circle text-xs"></i>
+                        Default
+                    </button>
+
+                    <button id="btn-basemap-sat" onclick="setBasemap('satelit')"
+                        class="flex-1 min-w-[70px] bg-[#FFFFFF] text-[#0f172a] font-semibold py-1.5 px-2 rounded-sm border-b-4 border-r-2 border-gray-200 transition-all flex items-center justify-center gap-1">
+                        <i class="ph-fill ph-circle text-xs text-transparent"></i>
+                        Satelit
+                    </button>
+                </div>
+            </div>
+
+            <!-- PANEL 3: Legenda -->
+            <div class="bg-[#FCD116] rounded-sm shadow border-2 border-yellow-500 overflow-hidden shrink-0">
+                <button onclick="toggleCollapse('menu-legenda-sidebar-content', 'arrow-legenda-sidebar')"
+                    class="w-full flex items-center gap-2 bg-[#FCD116] p-2 pb-1 border-b border-yellow-600 hover:bg-yellow-400 transition-colors">
+                    <i class="ph-bold ph-list-dashes text-[#E3242B] text-[18px]"></i>
+                    <span class="font-semibold text-[#E3242B] flex-1 text-left">Legenda</span>
+                    <i id="arrow-legenda-sidebar" class="ph-bold ph-caret-down text-[#E3242B] arrow-icon closed"></i>
+                </button>
+                <div id="menu-legenda-sidebar-content" class="collapse-content bg-[#FCD116] p-2 pt-3 closed">
+                    <div class="flex flex-col gap-2 pl-2" id="legend-container">
+                        <!-- Legenda -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL 6: Aksi Bawah (Lokasi & Reset) -->
+            <div class="pt-3 border-t border-blue-800 flex flex-col gap-2 shrink-0">
+                <button onclick="findMyLocation(); toggleMobileMenu();"
+                    class="w-full bg-[#E3242B] text-[#FCD116] font-bold py-2 px-2 rounded-sm border-b-4 border-r-2 border-red-800 hover:bg-red-700 transition-all flex items-center justify-center gap-2"
+                    title="Cari Lokasi Saya ke Halte">
+                    <i class="ph-bold ph-crosshair text-xl"></i>
+                    Lokasi Saya ke Halte
+                </button>
+
+                <button onclick="resetMap(); toggleMobileMenu();"
+                    class="w-full bg-white text-[#E3242B] font-bold py-2 px-2 rounded-sm border-b-4 border-r-2 border-gray-300 hover:bg-gray-100 transition-all flex items-center justify-center gap-2">
+                    <i class="ph-bold ph-house text-xl"></i>
+                    Reset Tampilan
+                </button>
+            </div>
+
+        </aside>
+
+        <!-- OVERLAY ANIMASI LANGKAH REKOMENDASI (POPUP INTERAKTIF DI PETA) -->
+        <div id="map-anim-overlay"
+            class="absolute top-2 sm:top-6 left-1/2 -translate-x-1/2 z-[999] bg-white/95 backdrop-blur-md border-2 border-yellow-400 px-2 py-1.5 sm:px-6 sm:py-4 rounded-xl shadow-[0_10px_25px_-5px_rgba(0,0,0,0.3)] transition-all duration-500 opacity-0 pointer-events-none transform -translate-y-8 flex items-center gap-1.5 sm:gap-4 w-max sm:w-auto max-w-[85%] sm:max-w-sm justify-center">
+            <div id="map-anim-icon"
+                class="text-lg sm:text-4xl flex items-center justify-center w-6 h-6 sm:w-12 sm:h-12 rounded-full bg-slate-100 shrink-0">
+                <i class="ph-bold ph-spinner-gap animate-spin text-[#E3242B]"></i>
+            </div>
+            <div class="flex flex-col">
+                <div id="map-anim-title" class="font-bold text-[#E3242B] text-[9px] sm:text-sm uppercase tracking-wider leading-tight">Memuat...
+                </div>
+                <div id="map-anim-desc" class="text-[8px] sm:text-[13px] text-slate-700 font-medium leading-tight mt-0.5">Silakan tunggu</div>
+            </div>
+        </div>
+
+        <!-- MAP CONTAINER -->
+        <div id="map" class="flex-1 h-full z-[10] relative">
+            <!-- Peta Leaflet akan dimuat di sini -->
+        </div>
+
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Leaflet.PolylineDecorator (panah arah rute) - harus setelah Leaflet JS -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.min.js"></script>
+
+    <!-- Basemap Picker (Kanan Atas) -->
+    <!-- Kumpulan Panel Kanan -->
+    <div id="right-panels">
+        <!-- Basemap Picker Box -->
+        <div id="basemap-picker-box" class="map-panel minimized" onclick="expandPanel('basemap-picker-box')">
+            <button class="toggle-btn" onclick="collapsePanel(event, 'basemap-picker-box')">&times;</button>
+            <div class="title" title="Pilihan Basemap">
+                <i class="ph-bold ph-stack"></i>
+                <span class="title-text">Basemap</span>
+            </div>
+            <div class="panel-content basemap-buttons">
+                <button id="map-basemap-default" onclick="setBasemap('default')">Default</button>
+                <button id="map-basemap-sat" onclick="setBasemap('satelit')">Satelit</button>
+            </div>
+        </div>
+
+        <!-- Legend box -->
+        <div id="basemap-box" class="map-panel minimized" onclick="expandPanel('basemap-box')">
+            <button class="toggle-btn" onclick="collapsePanel(event, 'basemap-box')">&times;</button>
+            <div class="title" title="Legenda Peta">
+                <i class="ph-bold ph-list-dashes"></i>
+                <span class="title-text">Legenda</span>
+            </div>
+            <div id="map-legend-list" class="panel-content">
+                <!-- Legend items rendered oleh JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- LOGIKA MENU MOBILE ---
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('mobile-backdrop');
+            const isHidden = backdrop.classList.contains('hidden');
+            if (isHidden) {
+                // buka menu mobile
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.remove('closed');
+                backdrop.classList.remove('hidden');
+            } else {
+                // tutup menu mobile
+                sidebar.classList.add('-translate-x-full');
+                backdrop.classList.add('hidden');
+            }
+            // Setelah animasi, pastikan peta di-refresh supaya tile tidak terpotong
+            setTimeout(() => { try { if (typeof map !== 'undefined' && map.invalidateSize) map.invalidateSize(); } catch (e) { /* ignore */ } }, 350);
+        }
+
+        // Toggle sidebar (desktop + fallback)
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('mobile-backdrop');
+            if (sidebar.classList.contains('closed')) {
+                sidebar.classList.remove('closed');
+                // pastikan mobile state juga bersih
+                sidebar.classList.remove('-translate-x-full');
+            } else {
+                sidebar.classList.add('closed');
+                // sembunyikan backdrop kalau ada
+                if (!backdrop.classList.contains('hidden')) backdrop.classList.add('hidden');
+            }
+            // refresh peta setelah transition selesai agar tile memenuhi area
+            setTimeout(() => { try { if (typeof map !== 'undefined' && map.invalidateSize) map.invalidateSize(); } catch (e) { /* ignore */ } }, 400);
+        }
+
+        // --- TOAST NOTIFICATION FUNCTION ---
+        function showToast(msg) {
+            const toast = document.getElementById('toast-msg');
+            toast.textContent = msg;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => toast.classList.add('opacity-0'), 3000);
+        }
+
+        const mapStyles = {
+            halte: {
+                label: 'Halte Bus Sekolah',
+                type: 'point',
+                htmlMarker: `<div class="custom-pin-halte"><i class="ph-fill ph-bus"></i></div>`,
+                legendHtml: `<i class="ph-fill ph-bus" style="color: #E3242B; font-size: 20px;"></i>`
+            },
+            sekolah: {
+                label: 'Lokasi Sekolah',
+                type: 'point',
+                htmlMarker: `<div class="custom-pin-sekolah"><i class="ph-fill ph-student"></i></div>`,
+                legendHtml: `<i class="ph-fill ph-student" style="color: #E36A2B; font-size: 20px;"></i>`
+            },
+            ruteExisting: {
+                label: 'Rute Bus Sekolah (Existing)',
+                type: 'line',
+                leafletStyle: { color: '#E3242B', weight: 4, opacity: 0.8 },
+                legendHtml: `<div style="background-color: #E3242B; width: 16px; height: 3px;"></div>`
+            },
+            ruteRekomendasi: {
+                label: 'Rute Bus Sekolah (Rekomendasi)',
+                type: 'line',
+                leafletStyle: { color: '#2a9d8f', weight: 4, opacity: 0.8, dashArray: '5, 10' },
+                legendHtml: `<div style="border-top: 3px dashed #2a9d8f; width: 16px; height: 0;"></div>`
+            }
+            ,
+            ruteBarat: {
+                label: 'Rute Barat',
+                type: 'line',
+                leafletStyle: { color: '#d90429', weight: 4, opacity: 0.9, className: 'garis-barat' },
+                legendHtml: `<div style="background-color: #d90429; width: 24px; height: 3px;"></div>`
+            },
+            ruteGreges: {
+                label: 'Rute Greges',
+                type: 'line',
+                leafletStyle: { color: '#4361ee', weight: 4, opacity: 0.9, className: 'garis-greges' },
+                legendHtml: `<div style="background-color: #4361ee; width: 24px; height: 3px;"></div>`
+            },
+            ruteSelatan: {
+                label: 'Rute Selatan',
+                type: 'line',
+                leafletStyle: { color: '#2a9d8f', weight: 4, opacity: 0.9, className: 'garis-selatan' },
+                legendHtml: `<div style="background-color: #2a9d8f; width: 24px; height: 3px;"></div>`
+            },
+            ruteTimur: {
+                label: 'Rute Timur',
+                type: 'line',
+                leafletStyle: { color: '#ff8c42', weight: 4, opacity: 0.9, className: 'garis-timur' },
+                legendHtml: `<div style="background-color: #ff8c42; width: 24px; height: 3px;"></div>`
+            },
+            ruteUtara: {
+                label: 'Rute Romokalisari',
+                type: 'line',
+                leafletStyle: { color: '#7f00ff', weight: 4, opacity: 0.9, className: 'garis-utara' },
+                legendHtml: `<div style="background-color: #7f00ff; width: 24px; height: 3px;"></div>`
+            },
+            ruteUtaraAsli: {
+                label: 'Rute Utara',
+                type: 'line',
+                leafletStyle: { color: '#00bcd4', weight: 4, opacity: 0.9, className: 'garis-utara' },
+                legendHtml: `<div style="background-color: #00bcd4; width: 24px; height: 3px;"></div>`
+            }
+        };
+
+        const iconHalte = L.divIcon({ className: 'custom-icon-wrapper', html: mapStyles.halte.htmlMarker, iconSize: [32, 32], iconAnchor: [16, 38], popupAnchor: [0, -38] });
+        const iconSekolah = L.divIcon({ className: 'custom-icon-wrapper', html: mapStyles.sekolah.htmlMarker, iconSize: [32, 32], iconAnchor: [16, 38], popupAnchor: [0, -38] });
+
+        // URL Data GeoJSON 
+        const urlGeoJSON = {
+            halte: 'halte.geojson',
+            sekolah: 'sekolah.geojson',
+            ruteExisting: 'rute_existing.geojson',
+            ruteRekomendasi: 'rute_rekomendasi.geojson',
+            ruteBarat: 'RuteBarat.geojson',
+            ruteGreges: 'RuteGreges.geojson',
+            ruteSelatan: 'RuteSelatan.geojson',
+            ruteTimur: 'RuteTimur.geojson',
+            ruteUtara: 'RuteUtara.geojson',
+            ruteBerangkatUtara: 'Rute_Berangkat_Utara.geojson',
+            rutePulangUtara: 'Rute_Pulang_Utara.geojson'
+        };
+
+        let dataHalteRaw = null;
+        let dataSekolahRaw = null;
+
+        const searchData = {};
+
+        const surabayaBounds = L.latLngBounds(
+            [-7.4500, 112.5000],
+            [-7.1000, 112.9000]
+        );
+        const map = L.map('map', {
+            zoomControl: false,
+            zoomDelta: 0.5,
+            zoomSnap: 0.5,
+            minZoom: 11,
+            maxBounds: surabayaBounds,
+            maxBoundsViscosity: 0.8,
+            wheelPxPerZoomLevel: 120,      // lebih banyak pixel per level -> zoom lebih pelan & smooth
+            fadeAnimation: true,
+            markerZoomAnimation: true,
+            inertia: true,                  // aktifkan inersia pan
+            inertiaDeceleration: 2000,      // perlambatan inersia (px/s^2)
+            inertiaMaxSpeed: Infinity,      // kecepatan maks inersia tak dibatasi
+            easeLinearity: 0.25             // kelengkungan easing animasi pan
+        }).setView([-7.2900, 112.7500], 13);
+
+        const tileOptions = {
+            maxZoom: 22,
+            maxNativeZoom: 19,
+            updateWhenZooming: false,
+            updateWhenIdle: true,
+            keepBuffer: 6
+        };
+
+
+
+
+        const basemapSatelit = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...tileOptions, attribution: 'Tiles &copy; Esri' });
+        const basemapDefault = L.tileLayer('http://mt0.google.com/vt/lyrs=m&hl=id&x={x}&y={y}&z={z}', { ...tileOptions, attribution: '&copy; Google Maps' });
+        basemapDefault.addTo(map);
+
+        map.on('click', function () {
+            if (typeof ruteLayers !== 'undefined') {
+                for (let key in ruteLayers) {
+                    if (ruteLayers[key].active && ruteLayers[key].layer) {
+                        ruteLayers[key].layer.setStyle(mapStyles[key].leafletStyle);
+                    }
+                }
+            }
+        });
+
+        // Event listener saat zoom berubah untuk menyesuaikan kerapatan dan ukuran panah serta memunculkan label/tooltip marker
+        map.on('zoomend', function () {
+            if (typeof ruteLayers !== 'undefined') {
+                for (let key in ruteLayers) {
+                    const r = ruteLayers[key];
+                    if (r.active && r.layer && routeArrowConfig[key]) {
+                        const color = mapStyles[key] ? mapStyles[key].leafletStyle.color : '#E3242B';
+                        addArrowDecorators(key, r.layer, color);
+                    }
+                }
+            }
+            updateMarkerLabels();
+        });
+
+        function updateSearchData() {
+            for (let key in searchData) delete searchData[key];
+
+            layerHalte.eachLayer(layer => {
+                const namaHalte = layer.feature.properties.Halte || layer.feature.properties.nama;
+                if (namaHalte) {
+                    searchData[namaHalte.toLowerCase()] = { marker: layer, originalName: namaHalte, type: 'Halte' };
+                }
+            });
+            layerSekolah.eachLayer(layer => {
+                const namaSekolah = layer.feature.properties.Nama_Sekolah || layer.feature.properties.nama;
+                if (namaSekolah) {
+                    searchData[namaSekolah.toLowerCase()] = { marker: layer, originalName: namaSekolah, type: 'Sekolah' };
+                }
+            });
+        }
+
+        function updateMarkerLabels() {
+            const zoom = map.getZoom();
+            const threshold = 15; // Ambang batas level zoom untuk memunculkan nama
+
+            // Fungsi pembantu untuk membersihkan redudansi teks di label (seperti kata "Surabaya")
+            function cleanLabelName(name) {
+                if (!name) return "";
+                return name
+                    .replace(/[,-\s]+(?:Kota\s+)?Su(?:ara|ra)baya\b/gi, "") // Hapus "Surabaya", "Kota Surabaya", "Suarabaya"
+                    .trim();
+            }
+
+            if (zoom >= threshold) {
+                const renderedNames = new Set();
+
+                // Berikan label untuk Halte
+                if (typeof layerHalte !== 'undefined' && layerHalte.eachLayer) {
+                    layerHalte.eachLayer(layer => {
+                        const rawName = layer.feature.properties.Halte || layer.feature.properties.nama;
+                        const name = cleanLabelName(rawName);
+                        if (name) {
+                            const nameLower = name.toLowerCase();
+                            if (renderedNames.has(nameLower)) {
+                                // Jika nama label ini sudah dirender sebelumnya di peta, hindari duplikasi/redudansi label
+                                if (layer.getTooltip()) layer.unbindTooltip();
+                                return;
+                            }
+                            renderedNames.add(nameLower);
+
+                            const existingTooltip = layer.getTooltip();
+                            if (!existingTooltip || existingTooltip.getContent() !== name) {
+                                layer.bindTooltip(name, {
+                                    permanent: true,
+                                    direction: 'bottom',
+                                    className: 'marker-label halte-label',
+                                    offset: [0, 10]
+                                });
+                            }
+                        }
+                    });
+                }
+
+                // Berikan label untuk Sekolah
+                if (typeof layerSekolah !== 'undefined' && layerSekolah.eachLayer) {
+                    layerSekolah.eachLayer(layer => {
+                        const rawName = layer.feature.properties.Nama_Sekolah || layer.feature.properties.nama;
+                        const name = cleanLabelName(rawName);
+                        if (name) {
+                            const nameLower = name.toLowerCase();
+                            if (renderedNames.has(nameLower)) {
+                                // Jika nama label ini sudah dirender sebelumnya di peta, hindari duplikasi/redudansi label
+                                if (layer.getTooltip()) layer.unbindTooltip();
+                                return;
+                            }
+                            renderedNames.add(nameLower);
+
+                            const existingTooltip = layer.getTooltip();
+                            if (!existingTooltip || existingTooltip.getContent() !== name) {
+                                layer.bindTooltip(name, {
+                                    permanent: true,
+                                    direction: 'bottom',
+                                    className: 'marker-label sekolah-label',
+                                    offset: [0, 10]
+                                });
+                            }
+                        }
+                    });
+                }
+            } else {
+                // Lepaskan label jika di-zoom out melewati ambang batas
+                if (typeof layerHalte !== 'undefined' && layerHalte.eachLayer) {
+                    layerHalte.eachLayer(layer => {
+                        if (layer.getTooltip()) {
+                            layer.unbindTooltip();
+                        }
+                    });
+                }
+                if (typeof layerSekolah !== 'undefined' && layerSekolah.eachLayer) {
+                    layerSekolah.eachLayer(layer => {
+                        if (layer.getTooltip()) {
+                            layer.unbindTooltip();
+                        }
+                    });
+                }
+            }
+        }
+
+        // --- DAFTAR FILE GAMBAR YANG TERSEDIA DI images/Sekolah ---
+        const sekolahImageFiles = [
+            "Kantor Dishub Surabaya.png",
+            "Kantor Kecamatan Tandes, Kota Surabaya.png",
+            "Kantor Kecamatan Rungkut.png",
+            "Kantor Kelurahan Tambak Sarioso.png",
+            "MI Al-Karimah.png",
+            "Rusun Indrapura Surabaya.png",
+            "Rusun Romokalisari.png",
+            "Rusun Sombo.png",
+            "SD Al Hikmah Surabaya.png",
+            "SD Al Hikmah.png",
+            "SDK Don Bosco.png",
+            "SDN Banyu Urip IX Surabaya.png",
+            "SDN Brata Jaya.png",
+            "SDN Greges.png",
+            "SDN Kaliasin 3.png",
+            "SDN Kaliasin I Surabaya.png",
+            "SDN Kapasari VIII.png",
+            "SDN Kupang Krajan 1.png",
+            "SDN Ngagelrejo (2).png",
+            "SDN Ngagelrejo.png",
+            "SDN Pacarakeling VI.png",
+            "SDN Romokalisari.png",
+            "SDN Tambaksari III.png",
+            "SDN Tandes Kidul 1.png",
+            "SDN Tembok Dukuh.png",
+            "SMA 1 Surabaya.png",
+            "SMA 5 Surabaya.png",
+            "SMA 9 Surabaya.png",
+            "SMA Trimurti Surabaya.png",
+            "SMAK Frateran Surabaya.png",
+            "SMAK Pringadi Surabaya.png",
+            "SMAK Stella Maris.png",
+            "SMAN 1.png",
+            "SMAN 14.png",
+            "SMAN 16.png",
+            "SMAN 21 Surabaya.png",
+            "SMAN 4 Surabaya.png",
+            "SMAN 6 Surabaya.png",
+            "SMK Brawijaya.png",
+            "SMK Kawung 1.png",
+            "SMKN 7 Surabaya (2).png",
+            "SMKN 7 Surabaya.png",
+            "SMP Dewantara Surabaya.png",
+            "SMP Dewantara.png",
+            "SMP Ghufron Faqih.png",
+            "SMPK Angelus Custos.png",
+            "SMPK Stella Maris Surabaya.png",
+            "SMPN 1 Surabaya.png",
+            "SMPN 17 Surabaya.png",
+            "SMPN 2 Surabya.png",
+            "SMPN 25 Surabaya.png",
+            "SMPN 29 Surabaya.png",
+            "SMPN 3 Surabaya.png",
+            "SMPN 32 Surabaya.png",
+            "SMPN 37 Surabaya.png",
+            "SMPN 38 Surabaya.png",
+            "SMPN 39 Surabaya.png",
+            "SMPN 4 Surabaya.png",
+            "SMPN 42 Surabaya.png",
+            "SMPN 48 Surabaya.png",
+            "SMPN 5 Surabaya.png",
+            "SMPN 50 Surabaya.png",
+            "SMP_SMA Gracia.png",
+            "TK SD SMP Nurul Huda Surabaya.png",
+            "Wijaya Kusuma.png",
+            "Yayasan Ta'miriyyah Surabaya.png",
+            "Yayasan Ta`miriyah.png",
+            "SD Katolik Don Bosco.png",
+            "SDN Kaliasin 1.png",
+            "SDN Pacar Kelling VI.png",
+            "SDN Tambak Sari.png",
+            "SMA SMP GRACIA.jpeg",
+            "SMAK Pirngadi Surabaya.png",
+            "SMAN 2.jpeg",
+            "SMAN 5 Surabaya.png",
+            "SMAN 9.png",
+            "TK Al-Ansor.jpeg",
+            "TK, SD, SMP Nurul Huda.jpeg",
+            "Yayasan Ta'miriyah.jpeg"
+        ];
+
+        /**
+         * Mencari file gambar terbaik berdasarkan nama.
+         * 1. Coba cocok persis (case-insensitive)
+         * 2. Coba cocok berdasarkan substring (batas spasi)
+         * Mengembalikan URL gambar atau null jika tidak ada yang cocok.
+         */
+        function findBestImage(name) {
+            if (!name) return null;
+
+            const normalizeName = (str) => {
+                let s = str.toLowerCase().trim();
+                s = s.replace(/-/g, '/');
+                s = s.replace(/\bkecamatan\b/g, 'kec');
+                s = s.replace(/kec\./g, 'kec');
+                s = s.replace(/\bsurabaya\b/g, '');
+                s = s.replace(/\bkota\b/g, '');
+                s = s.replace(/\s+/g, ' ');
+                return s.trim();
+            };
+
+            const nameNorm = normalizeName(name);
+
+            // 1. Coba exact match sesudah dinormalisasi
+            for (const f of sekolahImageFiles) {
+                const fNorm = normalizeName(f.replace(/\.(png|jpe?g)$/i, ''));
+                if (fNorm === nameNorm) {
+                    return `images/Sekolah/${encodeURIComponent(f)}`;
+                }
+            }
+
+            // 2. Coba match substring dengan batas spasi (menghindari smpn 1 cocok dengan smpn 17)
+            for (const f of sekolahImageFiles) {
+                const fNorm = normalizeName(f.replace(/\.(png|jpe?g)$/i, ''));
+                if (fNorm.startsWith(nameNorm + ' ') || nameNorm.startsWith(fNorm + ' ')) {
+                    return `images/Sekolah/${encodeURIComponent(f)}`;
+                }
+            }
+
+            return null;
+        }
+
+        // --- FUNGSI GENERATE POPUP ---
+        function generatePopupHTML(title, address, subinfo, iconHtml, imageUrl, type) {
+            let imageSection = '';
+
+            const fallbackClass = type === 'sekolah' ? 'sekolah-fallback' : 'halte-fallback';
+            const fallbackIcon = type === 'sekolah' ? 'ph-bold ph-student' : 'ph-bold ph-bus';
+            const fallbackText = type === 'sekolah' ? 'Sekolah' : 'Halte';
+
+            if (imageUrl) {
+                // If localImageUrl exists, try to load it. If it fails, replace the container with our elegant fallback card.
+                imageSection = `
+                    <div class="popup-image-container">
+                        <img src="${imageUrl}" alt="Foto ${title}" class="popup-image" onerror="this.outerHTML=\`<div class='popup-image-fallback \${fallbackClass}'><i class='\${fallbackIcon}'></i><span>Foto \${fallbackText} Belum Tersedia</span></div>\`;">
+                    </div>
+                `;
+            } else {
+                imageSection = `
+                    <div class="popup-image-container">
+                        <div class="popup-image-fallback ${fallbackClass}">
+                            <i class="${fallbackIcon}"></i>
+                            <span>Foto ${fallbackText} Belum Tersedia</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const headerClass = type === 'sekolah' ? 'sekolah-header' : 'halte-header';
+
+            return `
+                <div class="popup-header ${headerClass}">
+                    ${iconHtml || ''} <span>${title || 'Tanpa Nama'}</span>
+                </div>
+                <div class="popup-body">
+                    ${imageSection}
+                    <div style="font-weight: 500; color: #1e293b; margin-bottom: 4px; display: flex; align-items: start; gap: 6px;">
+                        <i class="ph-bold ph-map-pin" style="color: #64748b; font-size: 16px; margin-top: 2px;"></i>
+                        <span>${address || 'Alamat tidak tersedia'}</span>
+                    </div>
+                    ${subinfo || ''}
+                </div>
+            `;
+        }
+
+        // --- LAYER HALTE ---
+        const layerHalte = L.geoJSON(null, {
+            pointToLayer: function (feature, latlng) {
+                const marker = L.marker(latlng, { icon: iconHalte });
+                // Ambil atribut dari halte.geojson
+                const nama = feature.properties.Halte || feature.properties.nama || "Halte Tanpa Nama";
+                const alamat = feature.properties.Alamat || feature.properties.alamat || "Alamat tidak tersedia";
+
+                const localImageUrl = findBestImage(nama);
+
+                // --- Badge Rute dari atribut Rute di halte.geojson ---
+                const ruteColorMap = {
+                    'SELATAN': { bg: 'linear-gradient(135deg, #2a9d8f 0%, #1e7066 100%)', text: '#ffffff' },
+                    'TIMUR': { bg: 'linear-gradient(135deg, #ff8c42 0%, #e06c20 100%)', text: '#ffffff' },
+                    'BARAT': { bg: 'linear-gradient(135deg, #d90429 0%, #b30322 100%)', text: '#ffffff' },
+                    'ROMOKALISARI': { bg: 'linear-gradient(135deg, #7f00ff 0%, #5c00b8 100%)', text: '#ffffff' },
+                    'UTARA': { bg: 'linear-gradient(135deg, #7f00ff 0%, #5c00b8 100%)', text: '#ffffff' },
+                    'GREGES': { bg: 'linear-gradient(135deg, #4361ee 0%, #2f44c4 100%)', text: '#ffffff' }
+                };
+                let ruteBadgesHtml = '';
+                const ruteAttr = feature.properties.Rute || feature.properties.rute || null;
+                if (ruteAttr) {
+                    const ruteList = String(ruteAttr).split(',').map(r => r.trim().toUpperCase());
+                    const badges = ruteList.map(rute => {
+                        const col = ruteColorMap[rute] || { bg: '#64748b', text: '#ffffff' };
+                        return `<span style="display:inline-block; background:${col.bg}; color:${col.text}; font-size:10px; font-weight:700; padding:3px 9px; border-radius:999px; letter-spacing:0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">${rute}</span>`;
+                    });
+                    ruteBadgesHtml = `<div style="margin-top:10px; border-top:1px solid #f1f5f9; padding-top:8px;">
+                        <span style="font-size:11px; font-weight:600; color:#475569; display:flex; align-items:center; gap:4px; margin-bottom:6px;"><i class="ph-bold ph-path" style="color:#ef4444;"></i> Dilalui Rute:</span>
+                        <div style="display:flex; flex-wrap:wrap; gap:4px;">${badges.join('')}</div>
+                    </div>`;
+                }
+
+                const halteIconHtml = '<i class="ph-bold ph-bus"></i>';
+                const popupContent = generatePopupHTML(nama, alamat, ruteBadgesHtml, halteIconHtml, localImageUrl, 'halte');
+                marker.bindPopup(popupContent);
+                return marker;
+            }
+        });
+
+        // --- LAYER SEKOLAH ---
+        const layerSekolah = L.geoJSON(null, {
+            pointToLayer: function (feature, latlng) {
+                const marker = L.marker(latlng, { icon: iconSekolah });
+
+                // Ambil rute sekolah (bisa multi-rute, dipisah koma)
+                const ruteSekolahAttr = feature.properties.Rute || feature.properties.rute || '';
+                const ruteSekolahList = String(ruteSekolahAttr).split(',').map(r => r.trim().toUpperCase()).filter(r => r);
+
+                // Hitung Rute Badges HTML sekali saja
+                const ruteColorMap = {
+                    'SELATAN': { bg: 'linear-gradient(135deg, #2a9d8f 0%, #1e7066 100%)', text: '#ffffff' },
+                    'TIMUR': { bg: 'linear-gradient(135deg, #ff8c42 0%, #e06c20 100%)', text: '#ffffff' },
+                    'BARAT': { bg: 'linear-gradient(135deg, #d90429 0%, #b30322 100%)', text: '#ffffff' },
+                    'ROMOKALISARI': { bg: 'linear-gradient(135deg, #7f00ff 0%, #5c00b8 100%)', text: '#ffffff' },
+                    'UTARA': { bg: 'linear-gradient(135deg, #7f00ff 0%, #5c00b8 100%)', text: '#ffffff' },
+                    'GREGES': { bg: 'linear-gradient(135deg, #4361ee 0%, #2f44c4 100%)', text: '#ffffff' }
+                };
+                let ruteBadgesHtml = '';
+                const ruteAttr = feature.properties.Rute || feature.properties.rute || null;
+                if (ruteAttr) {
+                    const ruteList = String(ruteAttr).split(',').map(r => r.trim().toUpperCase());
+                    const badges = ruteList.map(rute => {
+                        const col = ruteColorMap[rute] || { bg: '#64748b', text: '#ffffff' };
+                        return `<span style="display:inline-block; background:${col.bg}; color:${col.text}; font-size:10px; font-weight:700; padding:3px 9px; border-radius:999px; letter-spacing:0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">${rute}</span>`;
+                    });
+                    ruteBadgesHtml = `<div style="margin-top:10px; border-top:1px solid #f1f5f9; padding-top:8px;">
+                        <span style="font-size:11px; font-weight:600; color:#475569; display:flex; align-items:center; gap:4px; margin-bottom:6px;"><i class="ph-bold ph-path" style="color:#ef4444;"></i> Dilalui Rute:</span>
+                        <div style="display:flex; flex-wrap:wrap; gap:4px;">${badges.join('')}</div>
+                    </div>`;
+                }
+
+                const nama = feature.properties.Nama_Sekolah || feature.properties.nama || "Sekolah Tanpa Nama";
+                const localImageUrl = findBestImage(nama);
+                const sekolahIconHtml = '<i class="ph-bold ph-student"></i>';
+                const alamatSekolah = feature.properties.alamat || feature.properties.Alamat || feature.properties.ALAMAT;
+
+                // Bind Popup secara dinamis agar bisa mendeteksi perubahan arah (Berangkat/Pulang) secara realtime
+                marker.bindPopup(function () {
+                    const isBerangkat = (typeof currentDirection !== 'undefined' ? currentDirection : 0) === 0;
+
+                    const routeStarts = {
+                        'TIMUR': {
+                            berangkat: { name: 'Kantor Kec. Rungkut', lat: -7.322973, lng: 112.77087 },
+                            pulang: { name: 'Wijaya Kusuma', lat: -7.257253, lng: 112.749019 }
+                        },
+                        'SELATAN': {
+                            berangkat: { name: 'Kantor Dishub', lat: -7.343523, lng: 112.727555 },
+                            pulang: { name: 'Wijaya Kusuma', lat: -7.257253, lng: 112.749019 }
+                        },
+                        'BARAT': {
+                            berangkat: { name: 'Kantor Kec. Tandes', lat: -7.259209, lng: 112.677852 },
+                            pulang: { name: 'Wijaya Kusuma', lat: -7.257253, lng: 112.749019 }
+                        },
+                        'ROMOKALISARI': {
+                            berangkat: { name: 'Rusun Romokalisari', lat: -7.198514, lng: 112.6632 },
+                            pulang: { name: 'SDN Baratajaya', lat: -7.295244, lng: 112.757303 }
+                        },
+                        'UTARA': {
+                            berangkat: { name: 'Rusun Indrapura', lat: -7.23197, lng: 112.731025 },
+                            pulang: { name: 'Rusun Sombo', lat: -7.234194, lng: 112.746947 }
+                        },
+                        'GREGES': {
+                            berangkat: { name: 'Kel. Tambak Sarioso', lat: -7.225198, lng: 112.665819 },
+                            pulang: { name: 'SDN Greges', lat: -7.224, lng: 112.660 }
+                        }
+                    };
+
+                    let jarakLinesHtml = "";
+                    if (ruteSekolahList.length > 0) {
+                        ruteSekolahList.forEach(rute => {
+                            const startData = routeStarts[rute];
+                            if (startData) {
+                                const point = isBerangkat ? startData.berangkat : startData.pulang;
+                                const startLatLng = L.latLng(point.lat, point.lng);
+                                const distance = latlng.distanceTo(startLatLng);
+                                const distKm = (distance / 1000).toFixed(1);
+
+                                jarakLinesHtml += `
+                                    <div style="display:flex; align-items:center; gap:6px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; color:#c2410c; margin-top:4px;">
+                                        <i class="ph-bold ph-navigation-arrow" style="font-size:14px; color:#f97316;"></i>
+                                        <span>${distKm} km dari ${point.name}</span>
+                                    </div>`;
+                            }
+                        });
+                    }
+
+                    if (!jarakLinesHtml) {
+                        jarakLinesHtml = `
+                            <div style="display:flex; align-items:center; gap:6px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; color:#c2410c; margin-top:4px;">
+                                <i class="ph-bold ph-navigation-arrow" style="font-size:14px; color:#f97316;"></i>
+                                <span>Jarak titik awal tidak diketahui</span>
+                            </div>`;
+                    }
+
+                    const finalInfo = (feature.properties.info ? `<div style="color:#64748b; font-size:12px; margin-bottom:6px; line-height:1.4;">${feature.properties.info}</div>` : "") +
+                        jarakLinesHtml +
+                        ruteBadgesHtml;
+
+                    return generatePopupHTML(nama, alamatSekolah, finalInfo, sekolahIconHtml, localImageUrl, 'sekolah');
+                });
+                return marker;
+            }
+        });
+
+        let urutanRuteData = {};
+        async function loadUrutanRute() {
+            try {
+                const res = await fetch('Urutan_Rute.csv');
+                if (res.ok) {
+                    const text = await res.text();
+                    const lines = text.trim().split('\n');
+                    for (let line of lines) {
+                        let firstCommaIdx = line.indexOf(',');
+                        if (firstCommaIdx > -1) {
+                            let key = line.substring(0, firstCommaIdx).trim().toLowerCase();
+                            let value = line.substring(firstCommaIdx + 1).trim();
+                            if (value.startsWith('"') && value.endsWith('"')) {
+                                value = value.substring(1, value.length - 1);
+                            }
+                            urutanRuteData[key] = value;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Gagal memuat Urutan_Rute.csv', e);
+            }
+        }
+        loadUrutanRute();
+
+        function onEachRouteFeature(feature, layer, ruteKey) {
+            layer.on({
+                click: function (e) {
+                    L.DomEvent.stopPropagation(e);
+
+                    if (typeof ruteLayers !== 'undefined') {
+                        for (let key in ruteLayers) {
+                            if (ruteLayers[key].active && ruteLayers[key].layer) {
+                                ruteLayers[key].layer.setStyle(mapStyles[key].leafletStyle);
+                            }
+                        }
+                    }
+
+                    layer.setStyle({
+                        weight: 8,
+                        color: '#FCD116',
+                        opacity: 1
+                    });
+
+                    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                        layer.bringToFront();
+                    }
+
+                    let customNamaRute = "";
+                    const isBerangkat = currentDirection === 0;
+                    const dirSuffix = isBerangkat ? "Berangkat" : "Pulang";
+                    if (ruteKey === 'selatan') {
+                        customNamaRute = `Rute Selatan ${dirSuffix}<br><span style='font-size: 12px; font-weight: normal; color:#64748b;'>${isBerangkat ? 'Kantor Dishub ke Wijaya Kusuma' : 'Wijaya Kusuma ke Kantor Dishub'}</span>`;
+                    } else if (ruteKey === 'timur') {
+                        customNamaRute = `Rute Timur ${dirSuffix}<br><span style='font-size: 12px; font-weight: normal; color:#64748b;'>${isBerangkat ? 'Kantor Kecamatan Rungkut ke Wijaya Kusuma' : 'Wijaya Kusuma ke Kantor Kecamatan Rungkut'}</span>`;
+                    } else if (ruteKey === 'barat') {
+                        customNamaRute = `Rute Barat ${dirSuffix}<br><span style='font-size: 12px; font-weight: normal; color:#64748b;'>${isBerangkat ? 'Kantor Kecamatan Tandes ke Wijaya Kusuma' : 'Wijaya Kusuma ke Kantor Kecamatan Tandes'}</span>`;
+                    } else if (ruteKey === 'utara') {
+                        customNamaRute = `Rute Utara ${dirSuffix}<br><span style='font-size: 12px; font-weight: normal; color:#64748b;'>${isBerangkat ? 'Rusun Indrapura ke Rusun Sombo' : 'Rusun Sombo ke Rusun Indrapura'}</span>`;
+                    } else if (ruteKey === 'greges') {
+                        customNamaRute = `Rute Greges ${dirSuffix}<br><span style='font-size: 12px; font-weight: normal; color:#64748b;'>${isBerangkat ? 'Kantor Kelurahan Tambak Sarioso ke SDN Greges' : 'SDN Greges ke Kantor Kelurahan Tambak Sarioso'}</span>`;
+                    } else if (ruteKey === 'romokalisari') {
+                        customNamaRute = `Rute Romokalisari ${dirSuffix}<br><span style='font-size: 12px; font-weight: normal; color:#64748b;'>${isBerangkat ? 'Rusun Romokalisari ke SDN Barata Jaya' : 'SDN Barata Jaya ke Rusun Romokalisari'}</span>`;
+                    }
+                    const namaRute = customNamaRute || (feature.properties.nama_rute || feature.properties.nama || feature.properties.Name || "Jalur Bus Sekolah");
+                    let infoRute = feature.properties.info || "Menghubungkan simpul transportasi utama ke kawasan sekolah.";
+
+                    let urutanHTML = "";
+                    if (ruteKey && urutanRuteData[ruteKey]) {
+                        let arrUrutan = urutanRuteData[ruteKey].split(',').map(u => u.trim()).filter(u => u);
+
+                        // Jika arah pulang, urutan pemberhentian dibalik agar sesuai dengan arah perjalanan pulang!
+                        if (currentDirection === 1) {
+                            arrUrutan.reverse();
+                        }
+
+                        const itemsHTML = arrUrutan.map((stop, index) => {
+                            let itemClass = "";
+                            let subtextHTML = "";
+                            if (index === 0) {
+                                itemClass = "origin";
+                                subtextHTML = `<div class="timeline-subtext">Titik Keberangkatan</div>`;
+                            } else if (index === arrUrutan.length - 1) {
+                                itemClass = "destination";
+                                subtextHTML = `<div class="timeline-subtext">Titik Akhir Tujuan</div>`;
+                            }
+                            return `
+                                <div class="timeline-item ${itemClass}">
+                                    <div class="timeline-content">${stop}</div>
+                                    ${subtextHTML}
+                                </div>
+                            `;
+                        }).join('');
+
+                        urutanHTML = `
+                            <div style="margin-top: 12px;">
+                                <strong style="display:flex; align-items:center; gap:4px; margin-bottom: 8px; font-size: 13px; color:#1e293b;"><i class="ph-bold ph-list-numbers" style="color:#3b82f6;"></i> Urutan Pemberhentian:</strong>
+                                <div class="rute-timeline">
+                                    ${itemsHTML}
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    const jadwalBerangkat = "05.30 WIB (Senin - Jumat)";
+                    const jadwalPulang = "16.00 WIB (Senin - Kamis) &amp; 13.00 WIB (Jumat)";
+                    const jadwalText = (currentDirection === 0) ? jadwalBerangkat : jadwalPulang;
+                    const jadwalHTML = `
+                        <div style="margin-top: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px;">
+                            <strong style="display:flex; align-items:center; gap:4px; font-size: 12px; color: #166534; margin-bottom: 2px;">
+                                <i class="ph-bold ph-clock"></i> Jadwal ${currentDirection === 0 ? 'Keberangkatan' : 'Kepulangan'}:
+                            </strong>
+                            <div style="font-size: 11px; color: #15803d; font-weight: 500;">
+                                ${jadwalText}
+                            </div>
+                        </div>
+                    `;
+
+                    const popupContent = `
+                        <div class="popup-header route-header">
+                            <i class="ph-bold ph-path"></i> <span>${namaRute}</span>
+                        </div>
+                        <div class="popup-body">
+                            <div style="color: #64748b; font-size: 12px; line-height: 1.4; margin-bottom: 4px;">
+                                ${infoRute}
+                            </div>
+                            ${jadwalHTML}
+                            ${urutanHTML}
+                            <div style="font-size: 10px; color: #94a3b8; font-style: italic; margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 6px; display: flex; align-items: center; gap: 4px;">
+                                <i class="ph-bold ph-info"></i>
+                                <span>Klik area peta kosong untuk reset sorotan.</span>
+                            </div>
+                        </div>
+                    `;
+                    layer.bindPopup(popupContent).openPopup();
+                }
+            });
+        }
+
+        const layerRuteExisting = L.geoJSON(null, { style: mapStyles.ruteExisting.leafletStyle, onEachFeature: (f, l) => onEachRouteFeature(f, l, null) });
+        const layerRuteRekomendasi = L.geoJSON(null, { style: mapStyles.ruteRekomendasi.leafletStyle, onEachFeature: (f, l) => onEachRouteFeature(f, l, null) });
+
+        // Layer untuk rute tambahan (masing-masing warna berbeda)
+        const layerRuteBarat = L.geoJSON(null, { style: mapStyles.ruteBarat.leafletStyle, onEachFeature: (f, l) => onEachRouteFeature(f, l, 'barat') });
+        const layerRuteGreges = L.geoJSON(null, { style: mapStyles.ruteGreges.leafletStyle, onEachFeature: (f, l) => onEachRouteFeature(f, l, 'greges') });
+        const layerRuteSelatan = L.geoJSON(null, { style: mapStyles.ruteSelatan.leafletStyle, onEachFeature: (f, l) => onEachRouteFeature(f, l, 'selatan') });
+        const layerRuteTimur = L.geoJSON(null, { style: mapStyles.ruteTimur.leafletStyle, onEachFeature: (f, l) => onEachRouteFeature(f, l, 'timur') });
+        const layerRuteUtara = L.geoJSON(null, { style: mapStyles.ruteUtara.leafletStyle, onEachFeature: (f, l) => onEachRouteFeature(f, l, 'romokalisari') });
+        const layerRuteUtaraAsli = L.geoJSON(null, { style: mapStyles.ruteUtaraAsli.leafletStyle, onEachFeature: (f, l) => onEachRouteFeature(f, l, 'utara') });
+
+        // Raw data untuk tiap rute (disimpan agar dapat difilter menurut symbolid)
+        let rawRuteBarat = null;
+        let rawRuteGreges = null;
+        let rawRuteSelatan = null;
+
+        // Penyimpanan decorator layer panah per rute
+        const arrowDecorators = {};
+
+        // Konfigurasi arah panah: [bearing_berangkat]
+        // 0 = kanan (->), 90 = bawah (v), 180 = kiri (<-), 270 = atas (^)
+        // Leaflet polylineDecorator offset pakai rotate iconAnchor, kita pakai repeat offset + rotate
+        // Kita implementasi dengan SVG arrow marker yang di-rotate sesuai arah segmen sesungguhnya
+        // Pendekatan: gunakan L.polylineDecorator dengan L.Symbol.arrowHead
+        const routeArrowConfig = {
+            // key: { berangkat: bool reversed }
+            // true = arah sesuai data GeoJSON, false = terbalik (reversed)
+            // Ditentukan dari ketentuan soal:
+            // Berangkat: RS bawah->atas, RT bawah->atas, RB kiri->kanan, RG kiri->kanan, RU kiri->kanan
+            // Pulang: sebaliknya
+            'ruteSelatan': { forwardOnBerangkat: true },  // true = pakai koordinat GeoJSON as-is
+            'ruteTimur': { forwardOnBerangkat: true },
+            'ruteBarat': { forwardOnBerangkat: true },
+            'ruteGreges': { forwardOnBerangkat: true },
+            'ruteUtara': { forwardOnBerangkat: true },
+            'ruteUtaraAsli': { forwardOnBerangkat: true }
+        };
+
+        function removeArrowDecorators(routeKey) {
+            if (arrowDecorators[routeKey]) {
+                arrowDecorators[routeKey].forEach(d => { try { map.removeLayer(d); } catch (e) { } });
+                arrowDecorators[routeKey] = [];
+            }
+        }
+
+        function addArrowDecorators(routeKey, geoLayer, color) {
+            removeArrowDecorators(routeKey);
+            const cfg = routeArrowConfig[routeKey];
+            if (!cfg) return;
+
+            const isForward = cfg.forwardOnBerangkat;
+            const decorators = [];
+
+            geoLayer.eachLayer(function (layer) {
+                if (!layer.getLatLngs) return;
+                let latlngs = layer.getLatLngs();
+                // Flatten nested arrays (MultiLineString)
+                if (Array.isArray(latlngs[0]) && Array.isArray(latlngs[0][0])) {
+                    latlngs = latlngs.flat(2);
+                } else if (latlngs[0] && Array.isArray(latlngs[0])) {
+                    latlngs = latlngs.flat(1);
+                }
+                if (latlngs.length < 2) return;
+
+                const coordsToUse = isForward ? latlngs : [...latlngs].reverse();
+
+                // Hitung total panjang rute dalam meter
+                let totalLength = 0;
+                for (let i = 0; i < coordsToUse.length - 1; i++) {
+                    try {
+                        const p1 = L.latLng(coordsToUse[i]);
+                        const p2 = L.latLng(coordsToUse[i + 1]);
+                        totalLength += p1.distanceTo(p2);
+                    } catch (e) { }
+                }
+
+                // Dapatkan level zoom saat ini
+                const zoom = map.getZoom();
+
+                // Tentukan jarak antar panah (meter) berdasarkan zoom level agar rapi
+                let repeatMeters = 500;
+                if (zoom >= 16) {
+                    repeatMeters = 300;  // Zoom dekat sekali: 300m
+                } else if (zoom === 15) {
+                    repeatMeters = 500;  // Zoom dekat: 500m
+                } else if (zoom === 14) {
+                    repeatMeters = 800;  // Zoom sedang-dekat: 800m
+                } else if (zoom === 13) {
+                    repeatMeters = 1500; // Zoom sedang: 1500m
+                } else if (zoom === 12) {
+                    repeatMeters = 3000; // Zoom jauh: 3000m
+                } else {
+                    repeatMeters = 6000; // Zoom jauh sekali: 6000m
+                }
+
+                // Tentukan ukuran panah berdasarkan zoom level agar pas secara visual
+                let pixelSize = 16;
+                if (zoom >= 16) {
+                    pixelSize = 18; // Lebih besar saat zoom in
+                } else if (zoom === 15) {
+                    pixelSize = 16; // Normal
+                } else if (zoom === 14) {
+                    pixelSize = 14;
+                } else if (zoom === 13) {
+                    pixelSize = 12; // Sedang
+                } else {
+                    pixelSize = 10; // Lebih kecil saat zoom out agar tidak menumpuk
+                }
+
+                let patternOffset = '10%';
+                let patternRepeat = '15%';
+
+                if (totalLength > 0) {
+                    if (totalLength > repeatMeters) {
+                        const pct = (repeatMeters / totalLength) * 100;
+                        patternOffset = (pct / 2) + '%'; // Mulai di setengah interval
+                        patternRepeat = pct + '%';        // Ulangi sesuai interval meter
+                    } else {
+                        // Jika rute kurang dari jarak interval, taruh 1 panah di tengah
+                        patternOffset = '50%';
+                        patternRepeat = '0';
+                    }
+                }
+
+                const decorator = L.polylineDecorator(L.polyline(coordsToUse), {
+                    patterns: [{
+                        offset: patternOffset,
+                        repeat: patternRepeat,
+                        symbol: L.Symbol.arrowHead({
+                            pixelSize: pixelSize, // Ukuran dinamis berdasarkan zoom
+                            headAngle: 55,       // Sudut panah yang jelas
+                            pathOptions: {
+                                fillOpacity: 1,
+                                weight: 0,
+                                color: color,
+                                fill: true
+                            }
+                        })
+                    }]
+                }).addTo(map);
+                decorators.push(decorator);
+            });
+
+            arrowDecorators[routeKey] = decorators;
+        }
+        let rawRuteTimur = null;
+        let rawRuteUtara = null;
+        let rawRuteUtaraAsli = null;
+
+        // Arah saat ini: 0 = Berangkat, 1 = Pulang
+        let currentDirection = 0;
+
+        function getRawForKey(key) {
+            switch (key) {
+                case 'ruteBarat': return rawRuteBarat;
+                case 'ruteGreges': return rawRuteGreges;
+                case 'ruteSelatan': return rawRuteSelatan;
+                case 'ruteTimur': return rawRuteTimur;
+                case 'ruteUtara': return rawRuteUtara;
+                case 'ruteUtaraAsli': return rawRuteUtaraAsli;
+                default: return null;
+            }
+        }
+
+        function renderRoute(routeKey) {
+            const raw = getRawForKey(routeKey);
+            const r = ruteLayers[routeKey];
+            if (!r || !r.layer) return;
+            r.layer.clearLayers();
+            removeArrowDecorators(routeKey);
+            if (!raw || !raw.features) return;
+            function getSymbolIdProp(feat) {
+                if (!feat || !feat.properties) return undefined;
+                const props = feat.properties;
+                const candidates = ['symbolid', 'symbol_id', 'symbolId', 'SymbolID', 'SymbolId', 'Symbol_ID', 'Symbolid'];
+                for (const c of candidates) if (c in props) return props[c];
+                return undefined;
+            }
+
+            const filtered = {
+                type: 'FeatureCollection', features: raw.features.filter(f => {
+                    const sid = getSymbolIdProp(f);
+                    return String(sid) === String(currentDirection);
+                })
+            };
+            r.layer.addData(filtered);
+
+            // Tambah panah jika rute ini sedang aktif di peta
+            if (r.active) {
+                const color = mapStyles[routeKey] ? mapStyles[routeKey].leafletStyle.color : '#E3242B';
+                addArrowDecorators(routeKey, r.layer, color);
+            }
+        }
+
+        layerHalte.addTo(map);
+        layerSekolah.addTo(map);
+
+        const ruteLayers = {
+            'ruteExisting': { layer: layerRuteExisting, active: false },
+            'ruteRekomendasi': { layer: layerRuteRekomendasi, active: false },
+            'ruteBarat': { layer: layerRuteBarat, active: false },
+            'ruteGreges': { layer: layerRuteGreges, active: false },
+            'ruteSelatan': { layer: layerRuteSelatan, active: false },
+            'ruteTimur': { layer: layerRuteTimur, active: false },
+            'ruteUtara': { layer: layerRuteUtara, active: false },
+            'ruteUtaraAsli': { layer: layerRuteUtaraAsli, active: false }
+        };
+
+        async function loadAllGeoJSON() {
+            try {
+                const isEmbed = window.location.search.includes('embed=true');
+
+                const resHalte = await fetch(urlGeoJSON.halte);
+                if (resHalte.ok) {
+                    dataHalteRaw = await resHalte.json();
+                    if (isEmbed && dataHalteRaw.features) {
+                        dataHalteRaw.features = dataHalteRaw.features.filter(f => {
+                            const rAttr = f.properties.Rute || f.properties.rute || '';
+                            return rAttr.toUpperCase().includes('TIMUR');
+                        });
+                    }
+                    layerHalte.addData(dataHalteRaw);
+                }
+
+                const resSekolah = await fetch(urlGeoJSON.sekolah);
+                if (resSekolah.ok) {
+                    dataSekolahRaw = await resSekolah.json();
+                    if (isEmbed && dataSekolahRaw.features) {
+                        dataSekolahRaw.features = dataSekolahRaw.features.filter(f => {
+                            const rAttr = f.properties.Rute || f.properties.rute || '';
+                            return rAttr.toUpperCase().includes('TIMUR');
+                        });
+                    }
+                    layerSekolah.addData(dataSekolahRaw);
+                }
+
+                const resRuteE = await fetch(urlGeoJSON.ruteExisting);
+                if (resRuteE.ok) layerRuteExisting.addData(await resRuteE.json());
+
+                const resRuteR = await fetch(urlGeoJSON.ruteRekomendasi);
+                if (resRuteR.ok) layerRuteRekomendasi.addData(await resRuteR.json());
+
+                // Muat rute khusus dan SIMPAN sebagai raw (agar bisa difilter menurut symbolid)
+                try {
+                    const resBarat = await fetch(urlGeoJSON.ruteBarat);
+                    if (resBarat.ok) rawRuteBarat = await resBarat.json();
+                } catch (e) { console.warn('Gagal memuat RuteBarat.json', e); }
+
+                try {
+                    const resGreges = await fetch(urlGeoJSON.ruteGreges);
+                    if (resGreges.ok) rawRuteGreges = await resGreges.json();
+                } catch (e) { console.warn('Gagal memuat RuteGreges.json', e); }
+
+                try {
+                    const resSelatan = await fetch(urlGeoJSON.ruteSelatan);
+                    if (resSelatan.ok) rawRuteSelatan = await resSelatan.json();
+                } catch (e) { console.warn('Gagal memuat RuteSelatan.json', e); }
+
+                try {
+                    const resTimur = await fetch(urlGeoJSON.ruteTimur);
+                    if (resTimur.ok) rawRuteTimur = await resTimur.json();
+                } catch (e) { console.warn('Gagal memuat RuteTimur.json', e); }
+
+                try {
+                    const resUtara = await fetch(urlGeoJSON.ruteUtara);
+                    if (resUtara.ok) rawRuteUtara = await resUtara.json();
+                } catch (e) { console.warn('Gagal memuat RuteUtara.json', e); }
+
+                try {
+                    const resBU = await fetch(urlGeoJSON.ruteBerangkatUtara);
+                    const resPU = await fetch(urlGeoJSON.rutePulangUtara);
+                    if (resBU.ok && resPU.ok) {
+                        const dataBU = await resBU.json();
+                        const dataPU = await resPU.json();
+
+                        dataBU.features.forEach(f => { if (!f.properties) f.properties = {}; f.properties.symbolid = "0"; });
+                        dataPU.features.forEach(f => { if (!f.properties) f.properties = {}; f.properties.symbolid = "1"; });
+
+                        rawRuteUtaraAsli = {
+                            type: 'FeatureCollection',
+                            features: [...dataBU.features, ...dataPU.features]
+                        };
+                    }
+                } catch (e) { console.warn('Gagal memuat Rute_Berangkat_Utara/Pulang', e); }
+
+                updateSearchData();
+
+                // Aktifkan semua rute setelah data selesai dimuat
+                activateAllRoutes();
+                updateMarkerLabels();
+
+            } catch (error) {
+                console.warn("GeoJSON gagal dimuat via Fetch (normal jika tanpa Local Server).", error);
+            }
+        }
+
+        function activateAllRoutes() {
+            const isEmbed = window.location.search.includes('embed=true');
+            // Daftar rute beserta ID tombol terkait
+            let routeMap = [
+                { key: 'ruteSelatan', btnId: 'btn-rute-selatan' },
+                { key: 'ruteTimur', btnId: 'btn-rute-timur' },
+                { key: 'ruteBarat', btnId: 'btn-rute-barat' },
+                { key: 'ruteUtara', btnId: 'btn-rute-utara' },
+                { key: 'ruteGreges', btnId: 'btn-rute-greges' },
+                { key: 'ruteUtaraAsli', btnId: 'btn-rute-utara-asli' },
+                { key: 'ruteExisting', btnId: 'btn-rute-existing' },
+                { key: 'ruteRekomendasi', btnId: 'btn-rute-rekomendasi' }
+            ];
+
+            if (isEmbed) {
+                routeMap = [{ key: 'ruteTimur', btnId: 'btn-rute-timur' }];
+            }
+
+            routeMap.forEach(({ key, btnId }) => {
+                const ruteData = ruteLayers[key];
+                if (!ruteData || ruteData.active) return; // skip jika sudah aktif
+
+                // Render filter arah untuk rute yang memiliki raw data
+                try { renderRoute(key); } catch (e) { /* ignore */ }
+
+                map.addLayer(ruteData.layer);
+                ruteData.active = true;
+
+                // Tambahkan panah setelah rute aktif
+                const btn = document.getElementById(btnId);
+                const routeColor = btn ? (btn.dataset.routeColor || (mapStyles[key] ? mapStyles[key].leafletStyle.color : null)) : (mapStyles[key] ? mapStyles[key].leafletStyle.color : null);
+                if (routeArrowConfig[key] && routeColor) {
+                    addArrowDecorators(key, ruteData.layer, routeColor);
+                }
+
+                // Update tampilan tombol menjadi aktif menggunakan warna rute
+                if (btn) {
+                    if (routeColor) {
+                        btn.style.backgroundColor = routeColor;
+                        btn.style.borderColor = routeColor;
+                        btn.style.color = '#ffffff';
+                    }
+                    btn.classList.add('route-btn-active');
+                    const indicator = btn.querySelector('.indicator');
+                    if (indicator) indicator.style.opacity = '1';
+                }
+            });
+        }
+
+        loadAllGeoJSON();
+        // Set default arah ke Berangkat (symbolid = 0)
+        setTimeout(() => setDirection(0), 200);
+
+        document.querySelectorAll('.school-filter').forEach(cb => {
+            cb.addEventListener('change', applySchoolFilter);
+        });
+
+        function applySchoolFilter() {
+            if (!dataSekolahRaw) return;
+            const checkedTypes = Array.from(document.querySelectorAll('.school-filter:checked')).map(cb => cb.value);
+
+            layerSekolah.clearLayers();
+
+            const filteredFeatures = dataSekolahRaw.features.filter(feature => {
+                if (checkedTypes.length === 0) return false;
+
+                const nama = (feature.properties.Nama_Sekolah || feature.properties.nama || "").toUpperCase().trim();
+                
+                const isTK = nama.startsWith("TK") || nama.startsWith("YAYASAN");
+                const isSD = nama.startsWith("SD") || nama.startsWith("MI") || nama.startsWith("YAYASAN");
+                const isSMP = nama.startsWith("SMP") || nama.startsWith("YAYASAN");
+                const isSMA = nama.startsWith("SMA") || nama.startsWith("SMK") || nama.startsWith("YAYASAN");
+                
+                const hasKnownPrefix = nama.startsWith("TK") || nama.startsWith("SD") || nama.startsWith("MI") || 
+                                       nama.startsWith("SMP") || nama.startsWith("SMA") || nama.startsWith("SMK") || 
+                                       nama.startsWith("YAYASAN");
+
+                if (!hasKnownPrefix) {
+                    return true; // Tampilkan sekolah tanpa prefix standar agar tidak hilang
+                }
+
+                if (checkedTypes.includes("TK") && isTK) return true;
+                if (checkedTypes.includes("SD") && isSD) return true;
+                if (checkedTypes.includes("SMP") && isSMP) return true;
+                if (checkedTypes.includes("SMA") && isSMA) return true;
+
+                return false;
+            });
+
+            layerSekolah.addData(filteredFeatures);
+            updateSearchData();
+            updateMarkerLabels();
+        }
+
+        let userMarker = null;
+        let userLine = null;
+        let currentUserLatLng = null;
+
+        function closeMyLocation() {
+            if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+            if (userLine) { map.removeLayer(userLine); userLine = null; }
+            currentUserLatLng = null;
+        }
+
+        function findMyLocation() {
+            if (!navigator.geolocation) {
+                showToast("Peramban Anda tidak mendukung pelacakan lokasi.");
+                return;
+            }
+
+            showToast("Mencari lokasi Anda...");
+
+            navigator.geolocation.getCurrentPosition((position) => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+                currentUserLatLng = L.latLng(userLat, userLng);
+
+                map.flyTo(currentUserLatLng, 15);
+
+                if (userMarker) map.removeLayer(userMarker);
+                if (userLine) map.removeLayer(userLine);
+
+                const userIcon = L.divIcon({
+                    className: 'custom-icon-wrapper',
+                    html: `<div style="background-color: #3b82f6; width: 22px; height: 22px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.6); animation: pulse 2s infinite;"></div>`,
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11]
+                });
+
+                userMarker = L.marker(currentUserLatLng, { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+
+                const popupHtml = `
+                    <div class="flex flex-col min-w-[220px] -m-1">
+                        <!-- Header -->
+                        <div class="bg-gradient-to-r from-red-600 to-[#E3242B] text-white rounded-t-lg p-3 flex items-center gap-2.5 shadow-sm relative overflow-hidden">
+                            <div class="absolute -right-2 -top-2 opacity-20">
+                                <i class="ph-bold ph-crosshair text-5xl"></i>
+                            </div>
+                            <div class="bg-white/20 p-2 rounded-full flex shrink-0">
+                                <i class="ph-bold ph-map-pin text-[16px]"></i>
+                            </div>
+                            <div class="flex flex-col relative z-10 flex-1">
+                                <span class="text-[10px] uppercase font-semibold opacity-90 leading-tight">Lokasi Anda</span>
+                                <span class="text-[14px] font-bold leading-tight drop-shadow-sm">Titik Saat Ini</span>
+                            </div>
+                            <button onclick="closeMyLocation()" class="relative z-10 p-1 hover:bg-white/20 rounded-full transition-colors flex shrink-0" title="Tutup Fitur Lokasi">
+                                <i class="ph-bold ph-x text-lg text-white"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Body -->
+                        <div class="p-3.5 bg-white rounded-b-lg border border-gray-200 flex flex-col gap-2.5 shadow-sm">
+                            <label class="text-[11px] font-bold text-gray-600 flex items-center gap-1.5"><i class="ph-fill ph-navigation-arrow text-[#E3242B]"></i> Pilih Rute Tujuan Anda:</label>
+                            
+                            <div class="relative">
+                                <select id="popup-route-select" class="w-full appearance-none bg-gray-50 border border-gray-300 text-gray-800 text-[13px] font-semibold rounded-md py-2 px-3 pr-8 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 cursor-pointer transition-colors shadow-sm">
+                                    <option value="" disabled selected>-- Pilih Rute --</option>
+                                    <option value="SELATAN">Rute Selatan</option>
+                                    <option value="TIMUR">Rute Timur</option>
+                                    <option value="BARAT">Rute Barat</option>
+                                    <option value="ROMOKALISARI">Rute Romokalisari</option>
+                                    <option value="GREGES">Rute Greges</option>
+                                    <option value="UTARA">Rute Utara</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center px-2.5 pointer-events-none text-gray-400">
+                                    <i class="ph-bold ph-caret-down text-[12px]"></i>
+                                </div>
+                            </div>
+                            
+                            <button onclick="calculateRouteFromPopup()" class="w-full mt-1.5 bg-[#FCD116] hover:bg-yellow-400 text-[#E3242B] border border-yellow-500 shadow-sm py-2 rounded-md text-[13px] font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95">
+                                <i class="ph-bold ph-magnifying-glass text-[15px]"></i> Temukan Halte
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                userMarker.bindPopup(popupHtml, { closeButton: false }).openPopup();
+
+            }, (error) => {
+                showToast("Gagal mendapatkan lokasi. Pastikan izin GPS diaktifkan.");
+            }, { timeout: 10000 });
+        }
+
+        function calculateRouteFromPopup() {
+            const selectEl = document.getElementById('popup-route-select');
+            if (!selectEl) return;
+            const routeKey = selectEl.value;
+
+            if (!routeKey) {
+                showToast("Silakan pilih Rute Tujuan terlebih dahulu!");
+                return;
+            }
+            if (!currentUserLatLng) return;
+
+            if (userLine) map.removeLayer(userLine);
+
+            const routeStarts = {
+                'TIMUR': { name: 'Kantor Kec. Rungkut', lat: -7.322973, lng: 112.77087 },
+                'SELATAN': { name: 'Kantor Dishub', lat: -7.343523, lng: 112.727555 },
+                'BARAT': { name: 'Kantor Kec. Tandes', lat: -7.259209, lng: 112.677852 },
+                'ROMOKALISARI': { name: 'Rusun Romokalisari', lat: -7.198514, lng: 112.6632 },
+                'UTARA': { name: 'Rusun Indrapura', lat: -7.23197, lng: 112.731025 },
+                'GREGES': { name: 'Kel. Tambak Sarioso', lat: -7.225198, lng: 112.665819 }
+            };
+
+            const startData = routeStarts[routeKey];
+            if (!startData) {
+                showToast("Titik awal rute tidak ditemukan.");
+                return;
+            }
+
+            const endLatLng = L.latLng(startData.lat, startData.lng);
+            const distanceStraight = currentUserLatLng.distanceTo(endLatLng);
+
+            showToast("Menghitung jarak ke " + startData.name + "...");
+
+            const startLon = currentUserLatLng.lng;
+            const startLat = currentUserLatLng.lat;
+            const endLon = startData.lng;
+            const endLat = startData.lat;
+
+            const osrmUrl = `https://router.project-osrm.org/route/v1/walking/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson`;
+
+            fetch(osrmUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 'Ok' && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        const routeDistanceKm = (route.distance / 1000).toFixed(2);
+                        const routeCoordinates = route.geometry.coordinates;
+                        const latLngs = routeCoordinates.map(coord => [coord[1], coord[0]]);
+
+                        userMarker.bindPopup(`
+                            <div class="flex flex-col min-w-[220px] -m-1">
+                                <!-- Header -->
+                                <div class="bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-t-lg p-3 flex items-center gap-2.5 shadow-sm relative overflow-hidden">
+                                    <div class="absolute -right-2 -top-2 opacity-20">
+                                        <i class="ph-bold ph-crosshair text-5xl"></i>
+                                    </div>
+                                    <div class="bg-white/20 p-2 rounded-full flex shrink-0">
+                                        <i class="ph-bold ph-map-pin text-[16px]"></i>
+                                    </div>
+                                    <div class="flex flex-col relative z-10 flex-1">
+                                        <span class="text-[10px] uppercase font-semibold opacity-90 leading-tight">Lokasi Anda</span>
+                                        <span class="text-[14px] font-bold leading-tight drop-shadow-sm">Titik Saat Ini</span>
+                                    </div>
+                                    <button onclick="closeMyLocation()" class="relative z-10 p-1 hover:bg-white/20 rounded-full transition-colors flex shrink-0" title="Tutup Fitur Lokasi">
+                                        <i class="ph-bold ph-x text-lg text-white"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Body -->
+                                <div class="p-3.5 bg-white rounded-b-lg border border-gray-200 flex flex-col gap-2.5 shadow-sm">
+                                    <div class="text-[11px] font-bold text-gray-500">Rute ke titik awal:</div>
+                                    <div class="flex items-center gap-2.5 bg-red-50 border border-red-100 p-2.5 rounded-md">
+                                        <i class="ph-fill ph-flag-checkered text-red-500 text-xl"></i>
+                                        <div class="flex flex-col">
+                                            <span class="text-[13px] font-bold text-gray-800 leading-tight">${startData.name}</span>
+                                            <span class="text-[11px] text-red-500 font-semibold mt-1 flex items-center gap-1"><i class="ph-bold ph-person-simple-walk"></i> ${routeDistanceKm} km dari Lokasi Anda</span>
+                                        </div>
+                                    </div>
+                                    <button onclick="findMyLocation()" class="w-full mt-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 rounded-md text-[12px] font-bold transition-colors">
+                                        Pilih Rute Lain
+                                    </button>
+                                </div>
+                            </div>
+                        `, { closeButton: false }).openPopup();
+
+                        userLine = L.polyline(latLngs, {
+                            color: '#3b82f6',
+                            weight: 5,
+                            opacity: 0.8
+                        }).addTo(map);
+
+                        map.fitBounds(userLine.getBounds(), { padding: [50, 50] });
+
+                    } else {
+                        throw new Error("Rute tidak ditemukan");
+                    }
+                })
+                .catch(err => {
+                    console.warn("OSRM routing gagal, kembali menggunakan jarak lurus", err);
+                    const distKm = (distanceStraight / 1000).toFixed(2);
+                    userMarker.bindPopup(`
+                        <div class="flex flex-col min-w-[220px] -m-1">
+                            <!-- Header -->
+                            <div class="bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-t-lg p-3 flex items-center gap-2.5 shadow-sm relative overflow-hidden">
+                                <div class="absolute -right-2 -top-2 opacity-20">
+                                    <i class="ph-bold ph-crosshair text-5xl"></i>
+                                </div>
+                                <div class="bg-white/20 p-2 rounded-full flex shrink-0">
+                                    <i class="ph-bold ph-map-pin text-[16px]"></i>
+                                </div>
+                                <div class="flex flex-col relative z-10 flex-1">
+                                    <span class="text-[10px] uppercase font-semibold opacity-90 leading-tight">Lokasi Anda</span>
+                                    <span class="text-[14px] font-bold leading-tight drop-shadow-sm">Titik Saat Ini</span>
+                                </div>
+                                <button onclick="closeMyLocation()" class="relative z-10 p-1 hover:bg-white/20 rounded-full transition-colors flex shrink-0" title="Tutup Fitur Lokasi">
+                                    <i class="ph-bold ph-x text-lg text-white"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Body -->
+                            <div class="p-3.5 bg-white rounded-b-lg border border-gray-200 flex flex-col gap-2.5 shadow-sm">
+                                <div class="text-[11px] font-bold text-gray-500">Rute ke titik awal:</div>
+                                <div class="flex items-center gap-2.5 bg-orange-50 border border-orange-200 p-2.5 rounded-md">
+                                    <i class="ph-fill ph-flag-checkered text-orange-500 text-xl"></i>
+                                    <div class="flex flex-col">
+                                        <span class="text-[13px] font-bold text-gray-800 leading-tight">${startData.name}</span>
+                                        <span class="text-[11px] text-orange-600 font-semibold mt-1 flex items-center gap-1"><i class="ph-bold ph-ruler"></i> ${distKm} km dari Lokasi Anda</span>
+                                    </div>
+                                </div>
+                                <div class="text-[10px] text-red-500 font-medium italic flex items-center gap-1"><i class="ph-bold ph-warning"></i> Gagal memuat jalan</div>
+                                <button onclick="findMyLocation()" class="w-full mt-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 rounded-md text-[12px] font-bold transition-colors">
+                                    Pilih Rute Lain
+                                </button>
+                            </div>
+                        </div>
+                    `, { closeButton: false }).openPopup();
+
+                    userLine = L.polyline([currentUserLatLng, endLatLng], {
+                        color: '#3b82f6',
+                        weight: 3,
+                        dashArray: '5, 10',
+                        opacity: 0.8
+                    }).addTo(map);
+                    
+                    map.fitBounds(userLine.getBounds(), { padding: [50, 50] });
+                });
+        }
+
+        function buildLegend() {
+            const container = document.getElementById('legend-container');
+            const isEmbed = window.location.search.includes('embed=true');
+            if (isEmbed) {
+                container.innerHTML = `
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm"><div class="w-6 flex justify-center">${mapStyles.halte.legendHtml}</div><span>${mapStyles.halte.label}</span></div>
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm"><div class="w-6 flex justify-center">${mapStyles.sekolah.legendHtml}</div><span>${mapStyles.sekolah.label}</span></div>
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm"><div class="w-6 flex justify-center">${mapStyles.ruteTimur.legendHtml}</div><span>${mapStyles.ruteTimur.label}</span></div>
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm">
+                        <div class="w-6 flex justify-center">
+                            <div style="background:linear-gradient(135deg, #38bdf8, #0369a1); width:14px; height:14px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); display:flex; align-items:center; justify-content:center; border:1px solid white;"></div>
+                        </div>
+                        <span>Rekomendasi Halte Baru</span>
+                    </div>
+                    <div class="text-[#0369a1] text-xs font-bold mt-2">Skor AHP (Kesesuaian):</div>
+                    <div class="flex items-center gap-2 text-xs text-[#334155]"><i style="background:#ef4444; width:12px; height:12px; border-radius:3px;"></i> Sangat Tinggi</div>
+                    <div class="flex items-center gap-2 text-xs text-[#334155]"><i style="background:#f97316; width:12px; height:12px; border-radius:3px;"></i> Tinggi</div>
+                    <div class="flex items-center gap-2 text-xs text-[#334155]"><i style="background:#eab308; width:12px; height:12px; border-radius:3px;"></i> Sedang</div>
+                    <div class="flex items-center gap-2 text-xs text-[#334155]"><i style="background:#84cc16; width:12px; height:12px; border-radius:3px;"></i> Rendah</div>
+                    <div class="flex items-center gap-2 text-xs text-[#334155]"><i style="background:#22c55e; width:12px; height:12px; border-radius:3px;"></i> Sangat Rendah</div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm"><div class="w-6 flex justify-center">${mapStyles.halte.legendHtml}</div><span>${mapStyles.halte.label}</span></div>
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm"><div class="w-6 flex justify-center">${mapStyles.sekolah.legendHtml}</div><span>${mapStyles.sekolah.label}</span></div>
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm"><div class="w-6 flex justify-center">${mapStyles.ruteBarat.legendHtml}</div><span>${mapStyles.ruteBarat.label}</span></div>
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm"><div class="w-6 flex justify-center">${mapStyles.ruteGreges.legendHtml}</div><span>${mapStyles.ruteGreges.label}</span></div>
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm"><div class="w-6 flex justify-center">${mapStyles.ruteSelatan.legendHtml}</div><span>${mapStyles.ruteSelatan.label}</span></div>
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm"><div class="w-6 flex justify-center">${mapStyles.ruteTimur.legendHtml}</div><span>${mapStyles.ruteTimur.label}</span></div>
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm"><div class="w-6 flex justify-center">${mapStyles.ruteUtara.legendHtml}</div><span>${mapStyles.ruteUtara.label}</span></div>
+                    <div class="flex items-center gap-2 text-[#E3242B] text-sm"><div class="w-6 flex justify-center">${mapStyles.ruteUtaraAsli.legendHtml}</div><span>${mapStyles.ruteUtaraAsli.label}</span></div>
+                `;
+            }
+        }
+        buildLegend();
+
+        function buildBasemapLegend() {
+            const container = document.getElementById('map-legend-list');
+            if (!container) return;
+            const isEmbed = window.location.search.includes('embed=true');
+            const parts = [];
+            // Halte & Sekolah
+            parts.push(`<div class="legend-item"><div class="legend-swatch" style="background:transparent; display:inline-flex; align-items:center; justify-content:center;">${mapStyles.halte.legendHtml}</div><div>${mapStyles.halte.label}</div></div>`);
+            parts.push(`<div class="legend-item"><div class="legend-swatch" style="background:transparent; display:inline-flex; align-items:center; justify-content:center;">${mapStyles.sekolah.legendHtml}</div><div>${mapStyles.sekolah.label}</div></div>`);
+
+            // Rute warna
+            const routeKeys = isEmbed ? ['ruteTimur'] : ['ruteBarat', 'ruteGreges', 'ruteSelatan', 'ruteTimur', 'ruteUtara', 'ruteUtaraAsli'];
+            routeKeys.forEach(k => {
+                if (mapStyles[k]) {
+                    // extract color from legendHtml or style
+                    parts.push(`<div class="legend-item"><div class="legend-swatch">${mapStyles[k].legendHtml}</div><div>${mapStyles[k].label}</div></div>`);
+                }
+            });
+
+            if (isEmbed) {
+                parts.push(`<div class="legend-item"><div class="legend-swatch" style="background:transparent; display:inline-flex; align-items:center; justify-content:center;"><div style="background:linear-gradient(135deg, #38bdf8, #0369a1); width:14px; height:14px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:1px solid white;"></div></div><div>Rekomendasi Halte Baru</div></div>`);
+                parts.push(`<div style="font-weight:700; margin-top:8px; margin-bottom:4px; font-size:12px; color:#0369a1;">Tingkatan (AHP):</div>`);
+                parts.push(`<div class="legend-item"><div class="legend-swatch" style="background:#ef4444; width:12px; height:12px; border-radius:3px;"></div><div>Sangat Tinggi</div></div>`);
+                parts.push(`<div class="legend-item"><div class="legend-swatch" style="background:#f97316; width:12px; height:12px; border-radius:3px;"></div><div>Tinggi</div></div>`);
+                parts.push(`<div class="legend-item"><div class="legend-swatch" style="background:#eab308; width:12px; height:12px; border-radius:3px;"></div><div>Sedang</div></div>`);
+                parts.push(`<div class="legend-item"><div class="legend-swatch" style="background:#84cc16; width:12px; height:12px; border-radius:3px;"></div><div>Rendah</div></div>`);
+                parts.push(`<div class="legend-item"><div class="legend-swatch" style="background:#22c55e; width:12px; height:12px; border-radius:3px;"></div><div>Sangat Rendah</div></div>`);
+            }
+
+            container.innerHTML = parts.join('');
+        }
+        buildBasemapLegend();
+
+        function expandPanel(id) {
+            const box = document.getElementById(id);
+            if (box && box.classList.contains('minimized')) {
+                box.classList.remove('minimized');
+            }
+        }
+
+        function collapsePanel(event, id) {
+            event.stopPropagation();
+            const box = document.getElementById(id);
+            if (box) {
+                box.classList.add('minimized');
+            }
+        }
+
+        // Pastikan tombol menampilkan status awal
+        setTimeout(() => {
+            const btn = document.getElementById('basemap-toggle');
+            if (btn) btn.setAttribute('aria-expanded', 'true');
+        }, 250);
+
+        function toggleLayer(layerKey, btnElement) {
+            const ruteData = ruteLayers[layerKey];
+            const indicator = btnElement.querySelector('.indicator');
+            // Ambil warna rute dari data-attribute atau mapStyles
+            const routeColor = btnElement.dataset.routeColor || (mapStyles[layerKey] ? mapStyles[layerKey].leafletStyle.color : null);
+            if (ruteData.active) {
+                map.removeLayer(ruteData.layer);
+                removeArrowDecorators(layerKey);
+                ruteData.active = false;
+                // Reset ke tampilan default (putih)
+                btnElement.style.backgroundColor = '';
+                btnElement.style.borderColor = '';
+                btnElement.style.color = '';
+                btnElement.classList.remove('route-btn-active');
+                indicator.style.opacity = '0';
+            } else {
+                // Jika layer memiliki raw data yang perlu difilter menurut arah, render terlebih dahulu
+                try { renderRoute(layerKey); } catch (e) { /* ignore */ }
+                map.addLayer(ruteData.layer);
+                ruteData.active = true;
+                // Tambah panah
+                if (routeArrowConfig[layerKey]) {
+                    addArrowDecorators(layerKey, ruteData.layer, routeColor);
+                }
+                // Terapkan warna rute sebagai warna tombol aktif
+                if (routeColor) {
+                    btnElement.style.backgroundColor = routeColor;
+                    btnElement.style.borderColor = routeColor;
+                    btnElement.style.color = '#ffffff';
+                }
+                btnElement.classList.add('route-btn-active');
+                indicator.style.opacity = '1';
+            }
+        }
+
+        function setDirection(dir) {
+            if (dir !== 0 && dir !== 1) return;
+            currentDirection = dir;
+            // Update UI
+            const btnB = document.getElementById('btn-arah-berangkat');
+            const btnP = document.getElementById('btn-arah-pulang');
+            if (currentDirection === 0) {
+                btnB.classList.add('active');
+                btnP.classList.remove('active');
+            } else {
+                btnP.classList.add('active');
+                btnB.classList.remove('active');
+            }
+
+            // Render ulang semua rute yang aktif agar menampilkan symbolid sesuai pilihan dan update arah panah
+            for (const key in ruteLayers) {
+                if (ruteLayers[key].active) {
+                    renderRoute(key);
+                }
+            }
+        }
+
+        function toggleCollapse(contentId, arrowId) {
+            document.getElementById(contentId).classList.toggle('closed');
+            document.getElementById(arrowId).classList.toggle('closed');
+        }
+
+        function setBasemap(type) {
+            const btnDef = document.getElementById('btn-basemap-default');
+            const btnSat = document.getElementById('btn-basemap-sat');
+            const mapBtnDef = document.getElementById('map-basemap-default');
+            const mapBtnSat = document.getElementById('map-basemap-sat');
+
+            function applySelected(el) {
+                if (!el) return;
+                el.className = "flex-1 min-w-[70px] bg-[#E3242B] text-[#FCD116] font-semibold text-[14px] py-2 px-2 rounded-sm border-b-4 border-r-2 border-yellow-600 transition-all flex items-center justify-center gap-1 transform -translate-y-1";
+            }
+            function applyUnselected(el) {
+                if (!el) return;
+                el.className = "flex-1 min-w-[70px] bg-[#FFFFFF] text-[#0f172a] font-semibold text-[14px] py-2 px-2 rounded-sm border-b-4 border-r-2 border-gray-200 transition-all flex items-center justify-center gap-1";
+            }
+
+            try { map.removeLayer(basemapDefault); } catch (e) { }
+            try { map.removeLayer(basemapSatelit); } catch (e) { }
+
+            applyUnselected(btnDef);
+            applyUnselected(btnSat);
+            applyUnselected(mapBtnDef);
+            applyUnselected(mapBtnSat);
+
+            if (btnDef && btnDef.querySelector('i')) btnDef.querySelector('i').classList.add('text-transparent');
+            if (btnSat && btnSat.querySelector('i')) btnSat.querySelector('i').classList.add('text-transparent');
+
+            if (type === 'default') {
+                try { basemapDefault.addTo(map); } catch (e) { }
+                applySelected(btnDef);
+                applySelected(mapBtnDef);
+                if (btnDef && btnDef.querySelector('i')) btnDef.querySelector('i').classList.remove('text-transparent');
+            } else {
+                try { basemapSatelit.addTo(map); } catch (e) { }
+                applySelected(btnSat);
+                applySelected(mapBtnSat);
+                if (btnSat && btnSat.querySelector('i')) btnSat.querySelector('i').classList.remove('text-transparent');
+            }
+        }
+
+        // Set initial basemap UI to match the default tiles
+        try { setBasemap('default'); } catch (e) { /* ignore if map not ready */ }
+
+        function resetMap() {
+            map.setView([-7.2900, 112.7500], 13);
+            map.closePopup();
+            if (userMarker) map.removeLayer(userMarker);
+            if (userLine) map.removeLayer(userLine);
+            if (typeof ruteLayers !== 'undefined') {
+                for (let key in ruteLayers) {
+                    if (ruteLayers[key].active && ruteLayers[key].layer) {
+                        ruteLayers[key].layer.setStyle(mapStyles[key].leafletStyle);
+                    }
+                }
+            }
+        }
+
+        const searchInput = document.getElementById('search-input');
+        const searchInputTop = document.getElementById('search-input-top');
+        const searchResults = document.getElementById('search-results');
+        let activeSearchInput = searchInput; // Default to sidebar, dynamically updated
+
+        // Move dropdown out of sidebar to avoid clipping by overflow
+        document.body.appendChild(searchResults);
+        searchResults.style.position = 'absolute';
+        searchResults.style.zIndex = '99999';
+        searchResults.style.display = 'none';
+
+        function positionSearchResults() {
+            if (!activeSearchInput) return;
+            const rect = activeSearchInput.getBoundingClientRect();
+            const left = rect.left + window.pageXOffset;
+            const top = rect.bottom + window.pageYOffset + 4; // small gap
+            searchResults.style.left = left + 'px';
+            searchResults.style.top = top + 'px';
+            searchResults.style.width = rect.width + 'px';
+        }
+
+        function showSearchResults() {
+            positionSearchResults();
+            searchResults.style.display = 'block';
+        }
+
+        function hideSearchResults() {
+            searchResults.style.display = 'none';
+        }
+
+        window.addEventListener('resize', () => { if (searchResults.style.display === 'block') positionSearchResults(); });
+        window.addEventListener('scroll', () => { if (searchResults.style.display === 'block') positionSearchResults(); }, true);
+
+        function handleSearchInput(e) {
+            activeSearchInput = e.target;
+            const val = activeSearchInput.value.toLowerCase();
+            searchResults.innerHTML = '';
+
+            const itemNames = Object.keys(searchData);
+
+            if (!val) {
+                hideSearchResults();
+                return;
+            }
+
+            const matches = itemNames.filter(name => name.includes(val));
+
+            if (matches.length > 0) {
+                matches.forEach(match => {
+                    const data = searchData[match];
+
+                    const li = document.createElement('li');
+                    li.className = "cursor-pointer";
+                    li.textContent = data.originalName || '';
+
+                    li.addEventListener('click', () => {
+                        const marker = data.marker;
+                        map.flyTo(marker.getLatLng(), 16, { duration: 1.5 });
+                        setTimeout(() => { marker.openPopup(); }, 1500);
+                        activeSearchInput.value = data.originalName;
+                        hideSearchResults();
+
+                        // Sembunyikan sidebar agar layar penuh untuk map
+                        const sidebar = document.getElementById('sidebar');
+                        if (window.innerWidth >= 768 && !sidebar.classList.contains('closed')) {
+                            toggleSidebar();
+                        } else if (window.innerWidth < 768 && !sidebar.classList.contains('-translate-x-full')) {
+                            toggleMobileMenu();
+                        }
+                    });
+
+                    searchResults.appendChild(li);
+                });
+                showSearchResults();
+            } else {
+                searchResults.innerHTML = '<li class="px-3 py-2 text-sm italic" style="color:#6b7280;">Data tidak ditemukan</li>';
+                showSearchResults();
+            }
+        }
+
+        if (searchInput) searchInput.addEventListener('input', handleSearchInput);
+        if (searchInputTop) {
+            searchInputTop.addEventListener('input', handleSearchInput);
+            searchInputTop.addEventListener('focus', () => {
+                const sidebar = document.getElementById('sidebar');
+                if (window.innerWidth >= 768 && !sidebar.classList.contains('closed')) {
+                    toggleSidebar();
+                } else if (window.innerWidth < 768 && !sidebar.classList.contains('-translate-x-full')) {
+                    toggleMobileMenu();
+                }
+            });
+        }
+
+        document.addEventListener('click', function (e) {
+            const isClickInsideInput = (searchInput && searchInput.contains(e.target)) || (searchInputTop && searchInputTop.contains(e.target));
+            if (!isClickInsideInput && !searchResults.contains(e.target)) {
+                hideSearchResults();
+            }
+        });
+
+        function getColorDesign(bobot) {
+            // 1: Hijau (Rendah), 2: Hijau Kekuningan, 3: Kuning, 4: Oranye, 5: Merah (Tinggi)
+            return bobot === 5 ? '#ef4444' :
+                bobot === 4 ? '#f97316' :
+                    bobot === 3 ? '#eab308' :
+                        bobot === 2 ? '#84cc16' :
+                            bobot === 1 ? '#22c55e' :
+                                '#8b5cf6';
+        }
+
+        // Layer TOD (Rekomendasi Halte)
+        const layerTOD = L.geoJSON(null, {
+            style: function (feature) {
+                const bobot = feature.properties.gridcode || 1;
+                return {
+                    color: getColorDesign(bobot),
+                    weight: 2,
+                    opacity: 0.9,
+                    fillColor: getColorDesign(bobot),
+                    fillOpacity: 0.6
+                };
+            },
+            pointToLayer: function (feature, latlng) {
+                const bobot = feature.properties.gridcode || 1;
+                return L.circleMarker(latlng, {
+                    radius: 6,
+                    fillColor: getColorDesign(bobot),
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+            },
+            onEachFeature: function (feature, layer) {
+                if (feature.properties) {
+                    const bobot = feature.properties.gridcode || 1;
+                    let tingkatan = "";
+                    if (bobot === 1) tingkatan = "Sangat Rendah";
+                    else if (bobot === 2) tingkatan = "Rendah";
+                    else if (bobot === 3) tingkatan = "Sedang";
+                    else if (bobot === 4) tingkatan = "Tinggi";
+                    else if (bobot >= 5) tingkatan = "Sangat Tinggi";
+
+                    let popupContent = `
+                        <div class="popup-header">
+                            <i class="ph-bold ph-map-pin-plus"></i> <span>Rekomendasi Halte AHP</span>
+                        </div>
+                        <div class="popup-body">
+                            <div style="font-size: 13px; color: #334155; margin-bottom: 8px;">
+                                <strong>Skor AHP:</strong> <span style="color: ${getColorDesign(bobot)}; font-weight: bold;">${tingkatan}</span>
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; line-height: 1.4; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                                <em>Kawasan dengan skor AHP tinggi memiliki potensi besar sebagai lokasi halte bus sekolah yang optimal.</em>
+                            </div>
+                        </div>
+                    `;
+                    layer.bindPopup(popupContent);
+                }
+            }
+        });
+
+        // Layer Diversity
+        const layerDiversity = L.geoJSON(null, {
+            style: function (feature) {
+                const bobot = feature.properties.gridcode || 1;
+                return {
+                    color: getColorDesign(bobot),
+                    weight: 2,
+                    opacity: 0.9,
+                    fillColor: getColorDesign(bobot),
+                    fillOpacity: 0.6
+                };
+            },
+            pointToLayer: function (feature, latlng) {
+                const bobot = feature.properties.gridcode || 1;
+                return L.circleMarker(latlng, {
+                    radius: 6,
+                    fillColor: getColorDesign(bobot),
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+            },
+            onEachFeature: function (feature, layer) {
+                if (feature.properties) {
+                    const bobot = feature.properties.gridcode || 1;
+                    const namobj = feature.properties.NAMOBJ || '';
+                    let tingkatan = "";
+                    if (bobot === 1) tingkatan = "Sangat Rendah";
+                    else if (bobot === 2) tingkatan = "Rendah";
+                    else if (bobot === 3) tingkatan = "Sedang";
+                    else if (bobot === 4) tingkatan = "Tinggi";
+                    else if (bobot >= 5) tingkatan = "Sangat Tinggi";
+
+                    let popupContent = `
+                        <div class="popup-header">
+                            <i class="ph-bold ph-tree-structure"></i> <span>Diversity</span>
+                        </div>
+                        <div class="popup-body">
+                            ${namobj ? `<div style="font-size: 13px; color: #334155; margin-bottom: 6px;"><strong>Wilayah:</strong> ${namobj}</div>` : ''}
+                            <div style="font-size: 13px; color: #334155; margin-bottom: 8px;">
+                                <strong>Tingkatan:</strong> <span style="color: ${getColorDesign(bobot)}; font-weight: bold;">${tingkatan}</span>
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; line-height: 1.4; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                                <em>Semakin tinggi nilai diversity kawasan tersebut, semakin beragam penggunaan lahan dan bangkitan perjalanannya.</em>
+                            </div>
+                        </div>
+                    `;
+                    layer.bindPopup(popupContent);
+                }
+            }
+        });
+
+        // Layer Design
+        const layerDesign = L.geoJSON(null, {
+            style: function (feature) {
+                const bobot = feature.properties.gridcode || 1;
+                return {
+                    color: getColorDesign(bobot),
+                    weight: 2,
+                    opacity: 0.9,
+                    fillColor: getColorDesign(bobot),
+                    fillOpacity: 0.6
+                };
+            },
+            pointToLayer: function (feature, latlng) {
+                const bobot = feature.properties.gridcode || 1;
+                return L.circleMarker(latlng, {
+                    radius: 6,
+                    fillColor: getColorDesign(bobot),
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+            },
+            onEachFeature: function (feature, layer) {
+                if (feature.properties) {
+                    const bobot = feature.properties.gridcode || 1;
+                    let tingkatan = "";
+                    if (bobot === 1) tingkatan = "Sangat Rendah";
+                    else if (bobot === 2) tingkatan = "Rendah";
+                    else if (bobot === 3) tingkatan = "Sedang";
+                    else if (bobot === 4) tingkatan = "Tinggi";
+                    else if (bobot >= 5) tingkatan = "Sangat Tinggi";
+
+                    let popupContent = `
+                        <div class="popup-header">
+                            <i class="ph-bold ph-circles-three"></i> <span>Density</span>
+                        </div>
+                        <div class="popup-body">
+                            <div style="font-size: 13px; color: #334155; margin-bottom: 8px;">
+                                <strong>Tingkatan:</strong> <span style="color: ${getColorDesign(bobot)}; font-weight: bold;">${tingkatan}</span>
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; line-height: 1.4; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                                <em>Semakin tinggi nilai titik hotspot kawasan tersebut, semakin berpotensi menjadi kawasan rekomendasi halte.</em>
+                            </div>
+                        </div>
+                    `;
+                    layer.bindPopup(popupContent);
+                }
+            }
+        });
+
+        // Layer Density
+        const layerDensity = L.geoJSON(null, {
+            style: function (feature) {
+                const bobot = feature.properties.gridcode || 1;
+                return {
+                    color: getColorDesign(bobot),
+                    weight: 2,
+                    opacity: 0.9,
+                    fillColor: getColorDesign(bobot),
+                    fillOpacity: 0.6
+                };
+            },
+            pointToLayer: function (feature, latlng) {
+                const bobot = feature.properties.gridcode || 1;
+                return L.circleMarker(latlng, {
+                    radius: 6,
+                    fillColor: getColorDesign(bobot),
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+            },
+            onEachFeature: function (feature, layer) {
+                if (feature.properties) {
+                    const bobot = feature.properties.gridcode || 1;
+                    let tingkatan = "";
+                    if (bobot === 1) tingkatan = "Sangat Rendah";
+                    else if (bobot === 2) tingkatan = "Rendah";
+                    else if (bobot === 3) tingkatan = "Sedang";
+                    else if (bobot === 4) tingkatan = "Tinggi";
+                    else if (bobot >= 5) tingkatan = "Sangat Tinggi";
+
+                    let popupContent = `
+                        <div class="popup-header">
+                            <i class="ph-bold ph-circles-three"></i> <span>Density</span>
+                        </div>
+                        <div class="popup-body">
+                            <div style="font-size: 13px; color: #334155; margin-bottom: 8px;">
+                                <strong>Tingkatan:</strong> <span style="color: ${getColorDesign(bobot)}; font-weight: bold;">${tingkatan}</span>
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; line-height: 1.4; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                                <em>Semakin tinggi nilai titik hotspot kawasan tersebut, semakin berpotensi menjadi kawasan rekomendasi halte.</em>
+                            </div>
+                        </div>
+                    `;
+                    layer.bindPopup(popupContent);
+                }
+            }
+        });
+
+        // Layer DesaRuteTimur
+        const layerDesaTimur = L.geoJSON(null, {
+            interactive: false,
+            style: {
+                color: '#475569',
+                weight: 1,
+                opacity: 0.8,
+                fillOpacity: 0,
+                dashArray: '3, 4'
+            },
+            onEachFeature: function (feature, layer) {
+                if (feature.properties && feature.properties.NAMOBJ) {
+                    layer.bindTooltip(feature.properties.NAMOBJ, {
+                        permanent: true,
+                        direction: 'center',
+                        className: 'desa-label-tooltip'
+                    });
+                }
+            }
+        });
+
+        let isDesignLayerActive = false;
+        let isDensityLayerActive = false;
+        let isDiversityLayerActive = false;
+        let isTODLayerActive = false;
+
+        async function toggleDensityLayer() {
+            const icon = document.getElementById('density-toggle-icon');
+            if (isDensityLayerActive) {
+                map.removeLayer(layerDensity);
+                map.removeLayer(layerDesaTimur);
+                isDensityLayerActive = false;
+                if (icon) {
+                    icon.classList.remove('ph-eye');
+                    icon.classList.add('ph-eye-slash');
+                }
+            } else {
+                if (Object.keys(layerDensity._layers).length === 0) {
+                    try {
+                        const [resDensity, resDesa] = await Promise.all([
+                            fetch('TOD/Density.json'),
+                            fetch('TOD/DesaRuteTImur.json')
+                        ]);
+
+                        if (resDensity.ok) {
+                            const dataDensity = await resDensity.json();
+                            layerDensity.addData(dataDensity);
+                        } else {
+                            showToast("Gagal memuat Density.json");
+                            return;
+                        }
+
+                        if (resDesa.ok) {
+                            const dataDesa = await resDesa.json();
+                            layerDesaTimur.addData(dataDesa);
+                        }
+                    } catch (e) {
+                        showToast("Gagal memuat data Density/Desa");
+                        return;
+                    }
+                }
+                map.addLayer(layerDensity);
+                map.addLayer(layerDesaTimur);
+                isDensityLayerActive = true;
+                if (icon) {
+                    icon.classList.remove('ph-eye-slash');
+                    icon.classList.add('ph-eye');
+                }
+            }
+        }
+
+        async function toggleDesignLayer() {
+            const icon = document.getElementById('design-toggle-icon');
+            if (isDesignLayerActive) {
+                map.removeLayer(layerDesign);
+                isDesignLayerActive = false;
+                if (icon) {
+                    icon.classList.remove('ph-eye');
+                    icon.classList.add('ph-eye-slash');
+                }
+            } else {
+                if (Object.keys(layerDesign._layers).length === 0) {
+                    try {
+                        const res = await fetch('TOD/Design.geojson');
+                        if (res.ok) {
+                            const data = await res.json();
+                            layerDesign.addData(data);
+                        } else {
+                            showToast("Gagal memuat Design.geojson");
+                            return;
+                        }
+                    } catch (e) {
+                        showToast("Gagal memuat Design.geojson");
+                        return;
+                    }
+                }
+                map.addLayer(layerDesign);
+                isDesignLayerActive = true;
+                if (icon) {
+                    icon.classList.remove('ph-eye-slash');
+                    icon.classList.add('ph-eye');
+                }
+            }
+        }
+
+        async function toggleDiversityLayer() {
+            const icon = document.getElementById('diversity-toggle-icon');
+            if (isDiversityLayerActive) {
+                map.removeLayer(layerDiversity);
+                isDiversityLayerActive = false;
+                if (icon) {
+                    icon.classList.remove('ph-eye');
+                    icon.classList.add('ph-eye-slash');
+                }
+            } else {
+                if (Object.keys(layerDiversity._layers).length === 0) {
+                    try {
+                        const res = await fetch('TOD/Diversity.geojson');
+                        if (res.ok) {
+                            const data = await res.json();
+                            layerDiversity.addData(data);
+                        } else {
+                            showToast("Gagal memuat Diversity.geojson");
+                            return;
+                        }
+                    } catch (e) {
+                        showToast("Gagal memuat Diversity.geojson");
+                        return;
+                    }
+                }
+                map.addLayer(layerDiversity);
+                isDiversityLayerActive = true;
+                if (icon) {
+                    icon.classList.remove('ph-eye-slash');
+                    icon.classList.add('ph-eye');
+                }
+            }
+        }
+
+        async function toggleTODLayer() {
+            const icon = document.getElementById('tod-toggle-icon');
+            if (isTODLayerActive) {
+                map.removeLayer(layerTOD);
+                isTODLayerActive = false;
+                if (icon) {
+                    icon.classList.remove('ph-eye');
+                    icon.classList.add('ph-eye-slash');
+                }
+            } else {
+                if (Object.keys(layerTOD._layers).length === 0) {
+                    try {
+                        const res = await fetch('TOD/TOD.json');
+                        if (res.ok) {
+                            const data = await res.json();
+                            layerTOD.addData(data);
+                        } else {
+                            showToast("Gagal memuat TOD.json");
+                            return;
+                        }
+                    } catch (e) {
+                        showToast("Gagal memuat TOD.json");
+                        return;
+                    }
+                }
+                map.addLayer(layerTOD);
+                isTODLayerActive = true;
+                if (icon) {
+                    icon.classList.remove('ph-eye-slash');
+                    icon.classList.add('ph-eye');
+                }
+            }
+        }
+
+        // ===== Layer Rekomendasi Halte dari CSV =====
+        let layerHalteRek = null;         // layer grup marker biru
+        let isHalteRekActive = false;
+        let rekAnimRunning = false;
+        let abortRekAnim = false;
+        let _rekHalteData = null;         // cache CSV sudah diparse
+
+        // Fungsi ikon halte baru (biru) — sama bentuk dengan halte lama, warna biru (dengan animasi popup)
+        function createHalteBaruIcon(nama, index = 0) {
+            const delay = index * 0.15; // 150ms jeda per marker
+            const html = `
+                <div class="custom-icon-wrapper animate-halte-pop" style="display:flex;flex-direction:column;align-items:center; transform-origin:bottom center; animation-delay: ${delay}s;">
+                    <div class="custom-pin-halte-baru"><i class="ph-fill ph-bus"></i></div>
+                    <div class="halte-baru-label">${nama}</div>
+                </div>`;
+            return L.divIcon({
+                className: '',
+                html: html,
+                iconSize: [80, 60],
+                iconAnchor: [18, 36],
+                popupAnchor: [18, -36]
+            });
+        }
+
+        // Parse CSV rekomendasi halte (dengan cache)
+        async function _loadRekomendasiCSV() {
+            if (_rekHalteData) return _rekHalteData;
+            const res = await fetch('TOD/RekomendasiHalte.csv');
+            if (!res.ok) throw new Error('Gagal memuat RekomendasiHalte.csv');
+            const text = await res.text();
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const idxNo = headers.indexOf('No');
+            const idxX = headers.indexOf('X');
+            const idxY = headers.indexOf('Y');
+            const idxNama = headers.findIndex(h => h.toLowerCase().includes('rekomendasi'));
+            const points = [];
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                const cols = lines[i].split(',').map(c => c.trim());
+                const lng = parseFloat(cols[idxX]);
+                const lat = parseFloat(cols[idxY]);
+                const nama = cols[idxNama] || `Halte ${cols[idxNo]}`;
+                if (isNaN(lat) || isNaN(lng)) continue;
+                points.push({ lat, lng, nama });
+            }
+            _rekHalteData = points;
+            return points;
+        }
+
+        // Sembunyikan semua layer rekomendasi & reset state
+        function _clearRekLayers() {
+            if (layerHalteRek) { map.removeLayer(layerHalteRek); layerHalteRek = null; }
+            // Sembunyikan juga density/diversity/design/TOD jika sedang aktif
+            if (isDensityLayerActive) toggleDensityLayer();
+            if (isDiversityLayerActive) toggleDiversityLayer();
+            if (isDesignLayerActive) toggleDesignLayer();
+            if (isTODLayerActive) toggleTODLayer();
+            isHalteRekActive = false;
+        }
+
+        // Fungsi tunda (ms) dengan abort check
+        function _delay(ms) {
+            return new Promise((resolve, reject) => {
+                if (abortRekAnim) {
+                    reject(new Error('Aborted'));
+                    return;
+                }
+                const timer = setTimeout(() => {
+                    if (abortRekAnim) {
+                        reject(new Error('Aborted'));
+                    } else {
+                        resolve();
+                    }
+                }, ms);
+            });
+        }
+
+        // Fungsi step label
+        function _setStepLabel(text) {
+            const el = document.getElementById('rek-step-label');
+            if (!el) return;
+            el.style.display = 'block';
+            el.textContent = text;
+        }
+        function _hideStepLabel() {
+            const el = document.getElementById('rek-step-label');
+            if (el) el.style.display = 'none';
+        }
+
+        // Fungsi Overlay Peta Interaktif
+        function _setMapOverlay(title, desc, iconHtml) {
+            const overlay = document.getElementById('map-anim-overlay');
+            const iconDiv = document.getElementById('map-anim-icon');
+            const titleDiv = document.getElementById('map-anim-title');
+            const descDiv = document.getElementById('map-anim-desc');
+
+            if (!overlay) return;
+
+            overlay.classList.remove('opacity-0', '-translate-y-8');
+            overlay.classList.add('opacity-100', 'translate-y-0');
+
+            if (iconHtml) iconDiv.innerHTML = iconHtml;
+            if (title) titleDiv.textContent = title;
+            if (desc) descDiv.innerHTML = desc;
+        }
+
+        function _hideMapOverlay() {
+            const overlay = document.getElementById('map-anim-overlay');
+            if (!overlay) return;
+            overlay.classList.remove('opacity-100', 'translate-y-0');
+            overlay.classList.add('opacity-0', '-translate-y-8');
+        }
+
+        function resetAnimation() {
+            abortRekAnim = true;
+            _clearRekLayers();
+            if (map) {
+                map.setView([-7.2900, 112.7500], 13);
+                map.closePopup();
+            }
+            const btn = document.getElementById('btn-rek-halte');
+            const btnText = document.getElementById('btn-rek-halte-text');
+            const eyeIcon = document.getElementById('rek-halte-toggle-icon');
+            if (btn) { btn.classList.remove('active', 'loading'); }
+            if (btnText) btnText.textContent = 'Tampilkan Rekomendasi Halte';
+            if (eyeIcon) { eyeIcon.classList.remove('ph-eye'); eyeIcon.classList.add('ph-eye-slash'); }
+            _hideStepLabel();
+            _hideMapOverlay();
+            rekAnimRunning = false;
+        }
+
+        // Tombol utama: animasi urutan tampil rekomendasi
+        async function toggleHalteRekAnimated() {
+            const btn = document.getElementById('btn-rek-halte');
+            const btnText = document.getElementById('btn-rek-halte-text');
+            const eyeIcon = document.getElementById('rek-halte-toggle-icon');
+
+            // Jika sudah aktif → matikan semua
+            if (isHalteRekActive) {
+                _clearRekLayers();
+                if (btn) { btn.classList.remove('active'); }
+                if (btnText) btnText.textContent = 'Tampilkan Rekomendasi Halte';
+                if (eyeIcon) { eyeIcon.classList.remove('ph-eye'); eyeIcon.classList.add('ph-eye-slash'); }
+                _hideStepLabel();
+                _hideMapOverlay();
+                return;
+            }
+
+            if (rekAnimRunning) return;
+            rekAnimRunning = true;
+            abortRekAnim = false;
+            if (btn) btn.classList.add('loading');
+
+            // Auto-tutup sidebar (menu kiri) jika di tampilan mobile/ratio kecil agar animasi terlihat
+            if (window.innerWidth < 1024) {
+                const sidebar = document.getElementById('sidebar');
+                const backdrop = document.getElementById('mobile-backdrop');
+                if (sidebar) sidebar.classList.add('-translate-x-full');
+                if (backdrop) backdrop.classList.add('hidden');
+            }
+
+            try {
+                // Pastikan layer bersih sebelum mulai
+                if (isDensityLayerActive) await toggleDensityLayer();
+                if (isDiversityLayerActive) await toggleDiversityLayer();
+                if (isDesignLayerActive) await toggleDesignLayer();
+                if (isTODLayerActive) await toggleTODLayer();
+
+                // ---- Langkah 1: DENSITY ----
+                _setStepLabel('🔵 Langkah 1/6 — Density...');
+                _setMapOverlay('LANGKAH 1 DARI 6', 'Menganalisis Kepadatan Kawasan (Density)...', '<i class="ph-fill ph-circles-three text-[#E3242B] animate-pulse"></i>');
+                if (!isDensityLayerActive) await toggleDensityLayer();
+                await _delay(2000);
+
+                // ---- Langkah 2: DIVERSITY ----
+                _setStepLabel('🟡 Langkah 2/6 — Diversity...');
+                _setMapOverlay('LANGKAH 2 DARI 6', 'Menganalisis Tata Guna Lahan (Diversity)...', '<i class="ph-fill ph-tree-structure text-yellow-500 animate-pulse"></i>');
+                if (isDensityLayerActive) await toggleDensityLayer(); // Matikan Density
+                if (!isDiversityLayerActive) await toggleDiversityLayer(); // Nyalakan Diversity
+                await _delay(2000);
+
+                // ---- Langkah 3: DESIGN ----
+                _setStepLabel('🟢 Langkah 3/6 — Design...');
+                _setMapOverlay('LANGKAH 3 DARI 6', 'Menganalisis Infrastruktur & Jaringan Jalan (Design)...', '<i class="ph-fill ph-pencil-ruler text-green-500 animate-pulse"></i>');
+                if (isDiversityLayerActive) await toggleDiversityLayer(); // Matikan Diversity
+                if (!isDesignLayerActive) await toggleDesignLayer(); // Nyalakan Design
+                await _delay(2000);
+
+                // ---- Langkah 4: OVERLAY ----
+                _setStepLabel('🟣 Langkah 4/6 — Menggabungkan Kriteria...');
+
+                // Mulai dari peta bersih untuk step 4 (matikan layer Design yang menyala di step 3)
+                if (isDesignLayerActive) await toggleDesignLayer();
+                await _delay(500);
+
+                // Tumpuk 1: Density
+                _setMapOverlay('LANGKAH 4 DARI 6', 'Menumpuk Kriteria: <span style="color:#b91c1c; font-weight:700;">Density (49.3%)</span>', '<i class="ph-fill ph-circles-three text-[#E3242B] animate-pulse"></i>');
+                if (!isDensityLayerActive) await toggleDensityLayer();
+                await _delay(1500);
+
+                // Tumpuk 2: Diversity
+                _setMapOverlay('LANGKAH 4 DARI 6', 'Menumpuk Kriteria: <span style="color:#b91c1c; font-weight:700;">Density (49.3%)</span> + <span style="color:#d97706; font-weight:700;">Diversity (27.5%)</span>', '<i class="ph-fill ph-tree-structure text-yellow-500 animate-pulse"></i>');
+                if (!isDiversityLayerActive) await toggleDiversityLayer();
+                await _delay(1500);
+
+                // Tumpuk 3: Design
+                _setMapOverlay('LANGKAH 4 DARI 6', 'Menumpuk Kriteria: <span style="color:#b91c1c; font-weight:700;">Density (49.3%)</span> + <span style="color:#d97706; font-weight:700;">Diversity (27.5%)</span> + <span style="color:#16a34a; font-weight:700;">Design (23.2%)</span>', '<i class="ph-fill ph-pencil-ruler text-green-500 animate-pulse"></i>');
+                if (!isDesignLayerActive) await toggleDesignLayer();
+                await _delay(2000);
+
+                // ---- Langkah 5: BUFFER TOD ----
+                _setStepLabel('⭕ Langkah 5/6 — Buffer TOD...');
+                _setMapOverlay('LANGKAH 5 DARI 6', 'Menghasilkan Buffer Analytical Hierarchy Process...', '<i class="ph-bold ph-intersect text-purple-500 animate-pulse"></i>');
+
+                // Matikan Density, Diversity, Design dan munculkan Buffer TOD
+                if (isDensityLayerActive) await toggleDensityLayer();
+                if (isDiversityLayerActive) await toggleDiversityLayer();
+                if (isDesignLayerActive) await toggleDesignLayer();
+                if (!isTODLayerActive) await toggleTODLayer();
+                await _delay(1500);
+
+                // ---- Langkah 6: SIMBOLOGI HALTE BARU ----
+                _setStepLabel('🚌 Langkah 6/6 — Simbologi Halte Rekomendasi...');
+                _setMapOverlay('LANGKAH 6 DARI 6', 'Menentukan Titik Rekomendasi Halte di Area Merah AHP...', '<i class="ph-fill ph-map-pin-line text-blue-500 animate-bounce"></i>');
+
+                const points = await _loadRekomendasiCSV();
+                layerHalteRek = L.layerGroup();
+                points.forEach(({ lat, lng, nama }, index) => {
+                    const marker = L.marker([lat, lng], { icon: createHalteBaruIcon(nama, index) });
+
+                    // Elemen HTML untuk foto halte (otomatis menyesuaikan nama halte)
+                    const imgHtml = `
+                        <div style="margin-bottom:8px; border-radius:6px; overflow:hidden; border:1px solid #bae6fd; background:#f0f9ff;">
+                            <img src="images/${nama}.jpeg" alt="Foto ${nama}" 
+                                 onerror="this.onerror=null; this.src='images/${nama}.jpg'; this.onerror=function(){ this.parentElement.style.display='none'; };" 
+                                 style="width:100%; aspect-ratio:4/3; height:auto; object-fit:cover; display:block;" />
+                        </div>
+                    `;
+
+                    marker.bindPopup(`
+                        <div class="popup-header">
+                            <i class="ph-bold ph-bus" style="color:#0ea5e9;"></i>
+                            <span>Rekomendasi Halte Baru</span>
+                        </div>
+                        <div class="popup-body">
+                            ${imgHtml}
+                            <div style="font-size:14px;font-weight:700;color:#0369a1;margin-bottom:4px;">${nama}</div>
+                            <div style="font-size:12px;color:#475569;">
+                                <i class="ph-fill ph-map-pin" style="color:#0ea5e9;"></i>
+                                ${lat.toFixed(6)}, ${lng.toFixed(6)}
+                            </div>
+                            <div style="font-size:11px;color:#64748b;border-top:1px dashed #bae6fd;margin-top:8px;padding-top:8px;">
+                                <em>Titik ini direkomendasikan karena berada di area kesesuaian tinggi (lingkaran merah). Keberadaan Bus Stop Suroboyo Bus di titik ini juga akan mempermudah transit penumpang Bus Sekolah.</em>
+                            </div>
+                        </div>`);
+                    layerHalteRek.addLayer(marker);
+                });
+                map.addLayer(layerHalteRek);
+
+                // Tunggu sampai semua animasi halte selesai sebelum menampilkan 'Selesai'
+                const animDuration = (points.length * 150) + 1500;
+                await _delay(animDuration);
+
+                isHalteRekActive = true;
+                if (btn) { btn.classList.remove('loading'); btn.classList.add('active'); }
+                if (btnText) btnText.textContent = 'Sembunyikan Rekomendasi Halte';
+                if (eyeIcon) { eyeIcon.classList.remove('ph-eye-slash'); eyeIcon.classList.add('ph-eye'); }
+
+                _setStepLabel('✅ Selesai!');
+                _setMapOverlay('SELESAI', 'Rekomendasi Halte Berhasil Ditampilkan', '<i class="ph-fill ph-check-circle text-green-500"></i>');
+
+                setTimeout(() => {
+                    _hideStepLabel();
+                    _hideMapOverlay();
+                }, 3000);
+
+            } catch (e) {
+                if (e.message !== 'Aborted') {
+                    showToast('Gagal memuat data rekomendasi halte.');
+                }
+                if (btn) btn.classList.remove('loading');
+                _hideStepLabel();
+                _hideMapOverlay();
+            }
+            rekAnimRunning = false;
+        }
+
+        // (Zoom-scale untuk ikon halte baru tidak diperlukan — menggunakan ukuran Leaflet standar)
+
+        window.addEventListener('message', function(e) {
+            if (e.data === 'playAHP') {
+                if (typeof toggleHalteRekAnimated === 'function' && !rekAnimRunning && !isHalteRekActive) {
+                    toggleHalteRekAnimated();
+                }
+            } else if (e.data === 'resetMap') {
+                if (typeof resetAnimation === 'function') {
+                    resetAnimation();
+                }
+            }
+        });
+
+        // Auto-trigger feature based on URL param
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('action') === 'findMyLocation') {
+                const sidebar = document.getElementById('sidebar');
+                const isMobile = window.innerWidth < 1024;
+
+                if (sidebar) {
+                    // Tampilkan sidebar sejenak jika di mobile
+                    if (isMobile && typeof toggleMobileMenu === 'function') {
+                        const backdrop = document.getElementById('mobile-backdrop');
+                        if (backdrop && backdrop.classList.contains('hidden')) {
+                            toggleMobileMenu();
+                        }
+                    }
+
+                    // Scroll sidebar ke bawah agar tombol lokasi terlihat
+                    setTimeout(() => {
+                        sidebar.scrollTo({ top: sidebar.scrollHeight, behavior: 'smooth' });
+                    }, 300);
+
+                    // Sembunyikan kembali sidebar setelah 2 detik agar peta tidak tertutup (di mobile)
+                    if (isMobile && typeof toggleMobileMenu === 'function') {
+                        setTimeout(() => {
+                            const backdrop = document.getElementById('mobile-backdrop');
+                            if (backdrop && !backdrop.classList.contains('hidden')) {
+                                toggleMobileMenu();
+                            }
+                        }, 2000);
+                    }
+                }
+
+                // Jalankan fungsi pencarian lokasi setelah sidebar selesai beranimasi tutup
+                setTimeout(() => {
+                    if (typeof findMyLocation === 'function') {
+                        findMyLocation();
+                    }
+                }, isMobile ? 2400 : 800);
+            }
+        });
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,10 @@
+const fs = require('fs');
+const data = JSON.parse(fs.readFileSync('TOD/kepadatanpenduduk.geojson', 'utf8'));
+let vals = data.features.map(f => f.properties.Kepadatan_Penduduk).filter(v => v !== null && v !== undefined);
+vals.sort((a,b) => a - b);
+console.log("Min:", vals[0]);
+console.log("Max:", vals[vals.length - 1]);
+console.log("Q1:", vals[Math.floor(vals.length * 0.2)]);
+console.log("Q2:", vals[Math.floor(vals.length * 0.4)]);
+console.log("Q3:", vals[Math.floor(vals.length * 0.6)]);
+console.log("Q4:", vals[Math.floor(vals.length * 0.8)]);
